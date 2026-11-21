@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bancada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F3F2EF;--card:#FFFFFF;--line:#E4E2DC;--line2:#ECEAE4;--soft:#F8F7F4;--ink:#1F2329;--ink2:#3B4049;--muted:#5A606A;--accent:#33415C;--teal:#0F6E62;--teal-bg:#DDF3EC;--teal-ink:#0B5C4A}
+*{box-sizing:border-box}
+body{margin:0;font-family:Urbanist,system-ui,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
+button,input,textarea,select{font-family:inherit;font-size:inherit;color:inherit}
+button{cursor:pointer}
+a{color:var(--accent)}
+mark{background:#FFE89A;color:#3A2E00;border-radius:4px;padding:0 3px;font-weight:700}
+.hide{display:none!important}
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{background:#fff;border:1px solid var(--line);border-radius:24px;padding:32px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px}
+.logo{width:40px;height:40px;border-radius:12px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex:none}
+.fld{display:flex;flex-direction:column;gap:6px}
+.fld span{font-size:13px;font-weight:700;color:var(--ink2)}
+.inp{border:1px solid var(--line);background:var(--bg);border-radius:999px;padding:11px 16px;outline:none;width:100%}
+.inp:focus{border-color:#B9B5AC}
+textarea.inp{border-radius:16px;resize:vertical;line-height:1.5}
+.btn{border:0;background:var(--accent);color:#fff;font-weight:700;border-radius:999px;padding:11px 18px}
+.btn2{border:1px solid #DDDAD3;background:#fff;color:var(--ink);font-weight:700;border-radius:999px;padding:10px 16px}
+.btn-sm{padding:7px 12px;font-size:13px}
+.err{color:#A32D2D;font-size:13px;min-height:18px}
+/* shell */
+#app{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;padding:20px;min-height:100vh}
+nav{flex:1 1 220px;max-width:240px;background:#fff;border:1px solid var(--line);border-radius:24px;padding:22px 14px;display:flex;flex-direction:column;gap:6px;position:sticky;top:20px}
+.brand{display:flex;align-items:center;gap:10px;padding:0 8px 18px;font-weight:800;font-size:18px}
+.nav-a{display:flex;align-items:center;gap:10px;padding:11px 14px;border-radius:999px;color:var(--ink2);font-weight:600;border:1px solid transparent;background:none;text-align:left;width:100%}
+.nav-a.on{background:var(--bg);color:var(--ink);font-weight:700;border-color:#DDDAD3}
+.nav-a svg{flex:none}
+.nav-foot{margin-top:14px;padding:12px 8px 0;border-top:1px solid var(--line2);font-size:12px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;gap:6px}
+main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px}
+.search-top{position:relative}
+.search-top label{display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:999px;padding:12px 20px}
+.search-top input{flex:1;border:0;outline:none;background:transparent}
+.results{position:absolute;left:0;right:0;top:54px;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 12px 30px rgba(0,0,0,.08);z-index:20;max-height:60vh;overflow:auto;padding:10px}
+.res{display:block;width:100%;text-align:left;border:0;background:var(--soft);border-radius:14px;padding:10px 12px;margin-bottom:6px}
+.res small{display:block;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.res b{display:block;font-size:14px;margin:2px 0}
+.res span{font-size:13px;color:var(--muted)}
+.head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px;padding:4px 4px 0}
+.head h1{margin:0;font-size:30px;font-weight:800;letter-spacing:-.4px}
+.head p{margin:2px 0 0;font-size:14px;color:#646A73}
+.seg{display:inline-flex;gap:4px;background:#E9E7E2;border-radius:999px;padding:4px;flex-wrap:wrap}
+.seg button{border:0;border-radius:999px;padding:9px 16px;font-weight:700;font-size:14px;background:transparent;color:#4F555E}
+.seg button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.card{background:#fff;border:1px solid var(--line);border-radius:24px;padding:20px}
+.row{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start}
+.tag{font-size:11px;font-weight:700;border-radius:999px;padding:2px 8px}
+.t-msg{color:#1E4E8C;background:#E3EEFB}.t-rev{color:#8A4B00;background:#FDEBD3}.t-cs{color:var(--teal-ink);background:#E1F5EE}
+.chip{border-radius:999px;padding:8px 14px;font-weight:700;font-size:13px;background:#fff;color:var(--ink);border:1px solid #DDDAD3}
+.chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:12px;background:#fff;border:1px solid var(--line2);border-radius:10px;padding:6px 10px;align-self:flex-start;word-break:break-word}
+.note{background:#fff;border:1px solid var(--line);border-radius:18px;padding:14px 18px;font-size:14px;line-height:1.5}
+/* pendencias */
+.pd-list{display:flex;flex-direction:column;gap:8px;height:560px;overflow-y:auto;padding-right:4px}
+.pd-item{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;border-radius:16px;padding:12px 14px;background:#fff;border:1px solid var(--line2);position:relative}
+.pd-item.add{background:#F1F7F5;border-color:#A9D9CB}
+.pd-item .tt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;padding-right:56px}
+.pd-item .pv{font-size:13px;color:var(--muted);line-height:1.45}
+.pd-tools{position:absolute;right:10px;top:10px;display:flex;gap:4px}
+.ico{border:1px solid var(--line2);background:#fff;border-radius:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;padding:0}
+.pd-out{background:var(--soft);border:1px solid var(--line2);border-radius:18px;padding:18px 20px;height:520px;overflow-y:auto;line-height:1.6;white-space:pre-wrap}
+.pd-out .hf{color:#4F555E}
+/* modal */
+.ov{position:fixed;inset:0;background:rgba(20,22,26,.4);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal{background:#fff;border-radius:24px;padding:24px;width:100%;max-width:640px;max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
+/* steps */
+.step{display:flex;gap:12px;align-items:flex-start;background:var(--soft);border-radius:16px;padding:12px 14px}
+.num{width:26px;height:26px;border-radius:9px;background:#fff;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex:none}
+.step b{display:block;font-size:15px;margin-bottom:2px}
+.step p{margin:2px 0;font-size:14px;line-height:1.5;color:#2B3038}
+abbr{text-decoration:underline dotted var(--teal);text-underline-offset:3px;color:var(--teal-ink);font-weight:700;cursor:help}
+.sec-t{font-size:12px;font-weight:800;color:#4F555E;letter-spacing:.04em;margin:6px 0 2px}
+/* simulador */
+.mny{display:flex;align-items:center;gap:8px;background:var(--bg);border-radius:999px;padding:10px 16px}
+.mny input{flex:1;min-width:0;border:0;outline:none;background:transparent;font-size:16px;font-weight:700}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px}
+.tile small{font-size:12px;font-weight:700;color:var(--muted)}
+.tile div{font-size:22px;font-weight:800}
+.bar{display:flex;height:40px;border-radius:12px;overflow:hidden}
+.bar div{display:flex;align-items:center;padding:0 10px;font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;min-width:0}
+.calc{font-family:ui-monospace,Menlo,monospace;font-size:13px;background:var(--soft);border-radius:12px;padding:8px 12px}
+.box{border-radius:20px;padding:16px 18px;display:flex;flex-direction:column;gap:8px}
+.b-ok{background:#FBF0D9;color:#4A3200;border:1px solid #EBD3A0}
+.b-err{background:#FBE4E4;color:#5C1414;border:1px solid #F0B8B8}
+.b-off{background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
+.b-info{background:#E3EEFB;color:#12345E;border:1px solid #B9D3F2}
+@media(max-width:760px){nav{max-width:none;position:static}.tiles{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div id="login" class="hide">
+  <form class="login-box" id="login-form">
+    <div style="display:flex;align-items:center;gap:10px"><div class="logo">B</div><span style="font-weight:800;font-size:22px">Bancada</span></div>
+    <label class="fld"><span>E-mail</span><input class="inp" type="email" id="l-email" autocomplete="username" required></label>
+    <label class="fld"><span>Senha</span><input class="inp" type="password" id="l-senha" autocomplete="current-password" required></label>
+    <div class="err" id="l-err"></div>
+    <button class="btn" type="submit">Entrar</button>
+  </form>
+</div>
+
+<div id="app" class="hide">
+  <nav aria-label="Módulos">
+    <div class="brand"><div class="logo">B</div>Bancada</div>
+    <div id="nav-list"></div>
+    <div class="nav-foot"><span id="who"></span><button class="btn2 btn-sm" onclick="sair()">Sair</button></div>
+  </nav>
+  <main>
+    <div class="search-top">
+      <label><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#646A73" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <input type="search" id="q-geral" placeholder="Buscar em tudo: textos de pendência, intermediação, conceitos..." aria-label="Busca geral" autocomplete="off"></label>
+      <div class="results hide" id="results"></div>
+    </div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+/* ====== CONFIG ====== */
+var SB_URL='https://rrpwpcchnayldfasqejy.supabase.co';
+var SB_KEY='sb_publishable_5bPj_rqd344rGj5hBOx_WQ_nreBJDfq';
+
+/* ====== CONTEÚDO GENÉRICO (sem dados internos) ====== */
+var CONS_TOP=[{"t": "Jornada da cota", "s": "do início ao fim", "c": "#0F6E62", "b": "#E1F5EE", "ideia": "Da adesão até quitar, em 8 etapas.", "pts": ["Adesão: compra uma cota e vira consorciado", "Paga parcelas todo mês (FC + TA + FR + S)", "Contemplação por sorteio ou lance: ganha o direito, não quita", "Carta disponível e rendendo até ser usada", "Escolhe o destino: compra, IQ, quitação, construção", "Análise de documentos e constituição da garantia", "Pagamento direto ao vendedor (ou ao banco do IQ)", "Segue pagando até zerar o saldo devedor"]}, {"t": "Carta de crédito", "s": "o \"vale-imóvel\"", "c": "#5B3F8C", "b": "#EEEDFE", "ideia": "Antes da contemplação a carta acompanha o preço do bem. Depois, fica aplicada e ganha rendimento até o dinheiro sair.", "pts": ["Compra-se o direito a um bem que hoje custa X, não \"X reais\"", "O contrato define a atualização: preço do bem ou índice (INCC, IPCA)"]}, {"t": "Parcela", "s": "FC + TA + FR + S", "c": "#993C1D", "b": "#FAECE7", "ideia": "A parcela é um % do preço do bem: se a carta reajusta, a parcela reajusta junto.", "pts": ["Fundo Comum: a \"vaquinha\" que paga as cartas", "Taxa de Administração: remuneração da administradora, não é juros", "Fundo de Reserva e Seguro: só se o contrato prever", "Exemplo do curso: carta de R$ 70.000 a 2,3% ao mês = R$ 1.610"]}, {"t": "Lances", "s": "próprio · embutido · FGTS", "c": "#854F0B", "b": "#FAEEDA", "ideia": "Lance é adiantar parcelas para furar a fila.", "pts": ["Recursos próprios: recebe a carta inteira", "Embutido: usa parte da própria carta, recebe carta menor", "FGTS: só imóvel para moradia; o FGTS vai direto ao vendedor"]}, {"t": "Uso do crédito", "s": "compra · IQ · quitação", "c": "#0F6E62", "b": "#E1F5EE", "ideia": "O dinheiro nunca passa pela mão do consorciado.", "pts": ["Aquisição: administradora paga o vendedor", "Com IQ: quita o banco do vendedor e paga o resto ao vendedor", "Quitação: só financiamento próprio, total e do mesmo tipo de bem", "Em espécie: não usou + 180 dias da contemplação + quitou tudo", "Pagamento só depois dos documentos e da garantia constituída"]}, {"t": "Os 4 valores", "s": "como o preço se fecha", "c": "#993C1D", "b": "#FAECE7", "ideia": "O preço de compra e venda é pago inteiro: a carta disponível paga primeiro, o FGTS completa (com teto) e o resto sai do bolso.", "pts": ["Valor do bem: soma das cotas no contrato", "Valor disponível: o que a carta paga hoje, menos tarifas (muda todo dia)", "Compra e venda: o preço combinado", "Avaliação: o valor do laudo"]}, {"t": "Carta × imóvel", "s": "sobra ou falta", "c": "#5B3F8C", "b": "#EEEDFE", "ideia": "Sobrou: despesas até 10% da carta, o resto quita parcelas ou volta só com tudo quitado. Faltou: recursos próprios ou FGTS.", "pts": ["Despesas do imóvel: ITBI, registro, tarifas, seguros", "O complemento vai direto ao vendedor"]}, {"t": "Garantia", "s": "alienação fiduciária", "c": "#993C1D", "b": "#FAECE7", "ideia": "O imóvel fica alienado ao grupo até zerar o saldo devedor.", "pts": ["Em regra, a garantia é o imóvel comprado", "Se valer pouco perto do saldo, pode pedir garantia extra", "Pode ser outro imóvel, se a administradora aceitar", "Cota quitada: sem dívida, sem garantia"]}, {"t": "Saldo devedor", "s": "o que falta pagar", "c": "#0F6E62", "b": "#E1F5EE", "ideia": "Não tem juros, mas o saldo é um % do bem: se a carta reajusta, o saldo em reais sobe mesmo com tudo em dia.", "pts": ["Parcelas que faltam + diferenças + outras obrigações", "Contemplada é diferente de quitada"]}, {"t": "FGTS", "s": "4 jeitos de usar", "c": "#5B3F8C", "b": "#EEEDFE", "ideia": "Quando o FGTS entra na compra, ele vai para o vendedor, nunca para o consorciado.", "pts": ["Lance: até 100% do saldo", "Complementar a carta: FGTS + carta ≤ menor entre compra e venda e avaliação", "Amortizar ou liquidar: só depois de contemplado e de comprar", "Pagar parcelas: até 80% de cada, no máximo 12"]}];
+var CERTS=[{"k": "icp", "t": "ICP-Brasil", "apel": "o passaporte", "c": "#3C3489", "b": "#EEEDFE", "como": ["Compra numa certificadora", "Documento + face e digitais (presencial ou vídeo)", "Recebe em token, cartão ou nuvem"], "melhor": ["Cliente já tem (empresário, advogado, contador)", "Vai usar também fora do contrato (IR, empresa)"], "contra": "É pago. Não vale tirar só para um contrato."}, {"k": "enot", "t": "e-Notariado", "apel": "o crachá do tabelião", "c": "#085041", "b": "#E1F5EE", "como": ["Pede a um tabelionato de notas", "Documento + face e digitais (presencial ou vídeo com o tabelião)", "Fica no app, no celular"], "melhor": ["Estrangeiro (aceita passaporte)", "Brasileiro com problema no registro civil", "Vai fazer outros atos de notas (procuração, escritura)"], "contra": "Fica preso ao celular. Se trocar de aparelho, precisa reemitir."}, {"k": "idrc", "t": "IdRC", "apel": "a certidão que virou login", "c": "#712B13", "b": "#FAECE7", "como": ["Cadastro na plataforma do Registro Civil", "Sistema cruza com nascimento/casamento + face", "Vira uma conta para logar e assinar"], "melhor": ["Brasileiro com certidão em dia", "Quer o caminho mais simples e grátis", "Não depende de um aparelho específico"], "contra": "Sem registro civil brasileiro não funciona. Dados divergentes tendem a travar."}];
+
+/* ====== UTIL ====== */
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function semAc(s){return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();}
+function casa(alvo,q){q=semAc(q).trim();if(!q)return true;var a=semAc(alvo);return q.split(/\s+/).every(function(w){return a.indexOf(w)>=0;});}
+function R2(v){return (v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});}
+function num(v){var n=parseFloat(String(v).replace(',','.'));return isFinite(n)&&n>0?n:0;}
+function limparCopia(t){return t.replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/[–—]/g,'-');}
+function marcar(t){return esc(t).replace(/\[([^\]\n]+)\]/g,'<mark>[$1]</mark>');}
+function copiar(txt,btn,rot){
+  var ok=function(){if(btn){var o=btn.textContent;btn.textContent=rot||'Copiado ✓';setTimeout(function(){btn.textContent=o;},1600);}};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(ok,function(){fallbackCopy(txt);ok();});
+  else{fallbackCopy(txt);ok();}
+}
+function fallbackCopy(t){var a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');}catch(e){}a.remove();}
+
+/* ====== AUTH (fetch puro, sem bibliotecas externas) ====== */
+var sessao=null;
+function salvarSessao(s){sessao=s;try{localStorage.setItem('bancada_sessao',JSON.stringify(s));}catch(e){}}
+function lerSessao(){try{return JSON.parse(localStorage.getItem('bancada_sessao')||'null');}catch(e){return null;}}
+function guardar(d){salvarSessao({access_token:d.access_token,refresh_token:d.refresh_token,expires_at:Date.now()+(d.expires_in||3600)*1000,email:(d.user&&d.user.email)||(sessao&&sessao.email)||''});}
+async function entrar(email,senha){
+  var r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:senha})});
+  var d=await r.json();if(!r.ok)throw new Error(d.error_description||d.msg||'Não foi possível entrar.');guardar(d);
+}
+async function renovar(){
+  if(!sessao||!sessao.refresh_token)throw new Error('sem sessão');
+  var r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:sessao.refresh_token})});
+  var d=await r.json();if(!r.ok)throw new Error('sessão expirada');guardar(d);
+}
+async function token(){if(!sessao)throw new Error('sem sessão');if(Date.now()>sessao.expires_at-60000)await renovar();return sessao.access_token;}
+async function db(path,opt){
+  opt=opt||{};var t=await token();
+  var h={'apikey':SB_KEY,'Authorization':'Bearer '+t,'Content-Type':'application/json'};
+  if(opt.method&&opt.method!=='GET')h['Prefer']='return=representation';
+  var r=await fetch(SB_URL+'/rest/v1/'+path,{method:opt.method||'GET',headers:h,body:opt.body});
+  if(r.status===401){await renovar();return db(path,opt);}
+  var txt=await r.text();if(!r.ok)throw new Error(txt||r.statusText);
+  return txt?JSON.parse(txt):null;
+}
+function sair(){try{localStorage.removeItem('bancada_sessao');}catch(e){}sessao=null;mostrarLogin();}
+function mostrarLogin(){$('app').classList.add('hide');$('login').classList.remove('hide');}
+$('login-form').onsubmit=async function(e){
+  e.preventDefault();$('l-err').textContent='';
+  try{await entrar($('l-email').value.trim(),$('l-senha').value);await iniciar();}
+  catch(er){$('l-err').textContent=er.message;}
+};
+
+/* ====== DADOS ====== */
+var D={textos:[],canais:{},inter:null,links:[]};
+async function carregar(){
+  var r=await Promise.all([db('pend_textos?select=*&order=ordem.asc,id.asc'),db('pend_canais?select=*'),db('conteudo?select=chave,dados')]);
+  D.textos=r[0]||[];D.canais={};(r[1]||[]).forEach(function(c){D.canais[c.chave]={h:c.cabecalho,f:c.rodape};});
+  (r[2]||[]).forEach(function(c){if(c.chave==='intermediacao')D.inter=c.dados;if(c.chave==='links_extras')D.links=c.dados||[];});
+}
+
+/* ====== NAV ====== */
+var ICON={
+ pend:'<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6M9 17h4"/>',
+ rot:'<path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0"/><path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0"/><path d="M3 6v13M12 6v13M21 6v13"/>',
+ sim:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M14 11h2M8 15h2M14 15h2"/>',
+ cons:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>',
+ cert:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 9h3M15 13h3M7 15h4"/>',
+ ia:'<path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/>',
+ int:'<path d="M7 10h10M7 14h6"/><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-6l-4 3v-3H6a2 2 0 0 1-2-2z"/>'
+};
+var MODS=[['pend','Pendências'],['rot','Roteiros'],['sim','Simulador FGTS'],['cons','Consórcio'],['cert','Certificados'],['ia','Assistente'],['int','Intermediação']];
+var atual='pend';
+function renderNav(){
+  $('nav-list').innerHTML=MODS.map(function(m){return '<button class="nav-a'+(m[0]===atual?' on':'')+'" onclick="ir(\''+m[0]+'\')"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[m[0]]+'</svg>'+m[1]+'</button>';}).join('');
+}
+function ir(m){atual=m;try{localStorage.setItem('bancada_mod',m);}catch(e){}renderNav();render();window.scrollTo(0,0);}
+function render(){({pend:vPend,rot:vRot,sim:vSim,cons:vCons,cert:vCert,ia:vIA,int:vInt})[atual]();}
+function cab(t,sub,dir){return '<div class="head"><div><h1>'+t+'</h1><p>'+sub+'</p></div>'+(dir||'')+'</div>';}
+function segHtml(lista,ativo,fn){return '<div class="seg">'+lista.map(function(b){return '<button class="'+(b[0]===ativo?'on':'')+'" onclick="'+fn+'(\''+b[0]+'\')">'+b[1]+'</button>';}).join('')+'</div>';}
+
+/* ====== PENDÊNCIAS ====== */
+var PD={mod:'fin',canal:'tr',q:'',add:[]};
+function pdCanalKey(){return PD.mod+'_'+(PD.mod==='cs'&&PD.canal==='fd'?'tr':PD.canal);}
+function pdItens(){
+  var c=PD.canal==='wa'?'wa':'tr';
+  return D.textos.filter(function(t){return t.canal===c&&(t.modalidade==='*'||t.modalidade===PD.mod||(t.modalidade==='fd'&&PD.mod==='fin'&&PD.canal==='fd'));});
+}
+function pdTexto(){
+  var ch=D.canais[pdCanalKey()]||{h:'',f:''};
+  var adds=PD.add.map(function(id){return D.textos.find(function(t){return t.id===id;});}).filter(Boolean);
+  var msg=adds.filter(function(t){return t.tipo==='msg';});
+  if(msg.length)return {h:'',b:msg[msg.length-1].texto,f:''};
+  if(!adds.length)return {h:'',b:'',f:''};
+  return {h:ch.h,b:adds.map(function(t){return t.texto;}).join('\n'),f:ch.f};
+}
+function vPend(){
+  var canais=[['tr','Tradicional']].concat(PD.mod==='fin'?[['fd','Funding']]:[]).concat([['wa','WhatsApp']]);
+  $('view').innerHTML=cab('Pendências','Monte o texto, copie e cole. Sem fechar a operação no outro sistema.','<button class="btn2" onclick="pdEditar()">+ Novo texto</button>')+
+   '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">'+segHtml([['fin','Financiamento'],['cs','Consórcio']],PD.mod,'pdMod')+segHtml(canais,PD.canal,'pdCanal')+'</div>'+
+   '<div class="row" style="margin-top:16px;align-items:stretch">'+
+   '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px">'+
+     '<input class="inp" type="search" id="pd-q" placeholder="Buscar texto: renda, procuração, ilegível, união estável..." value="'+esc(PD.q)+'" oninput="PD.q=this.value;pdLista()">'+
+     '<div style="display:flex;justify-content:space-between;font-size:13px;color:#646A73;padding:0 6px"><span id="pd-n"></span><span>clique para adicionar</span></div>'+
+     '<div class="pd-list" id="pd-list"></div></section>'+
+   '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px">'+
+     '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><b style="font-size:18px">Texto montado</b><div style="display:flex;gap:8px"><button class="btn2" onclick="PD.add=[];pdLista();pdSaida()">Limpar</button><button class="btn" id="pd-copy" onclick="pdCopiar(this)">Copiar texto</button></div></div>'+
+     '<div class="pd-out" id="pd-out"></div>'+
+     '<div style="font-size:13px;color:var(--muted)"><mark>[CAMPO]</mark> vai com colchetes pro Word · aspas curvas e travessão viram caracteres simples ao copiar</div></section></div>';
+  pdLista();pdSaida();
+}
+function pdMod(m){PD.mod=m;if(m==='cs'&&PD.canal==='fd')PD.canal='tr';PD.add=[];vPend();}
+function pdCanal(c){PD.canal=c;PD.add=[];vPend();}
+function pdLista(){
+  var l=pdItens().filter(function(t){return casa(t.nome+' '+t.texto,PD.q);});
+  $('pd-n').textContent=l.length+(l.length===1?' texto':' textos');
+  $('pd-list').innerHTML=l.length?l.map(function(t){
+    var ad=PD.add.indexOf(t.id)>=0,pv=t.texto.replace(/\n/g,' ');if(pv.length>150)pv=pv.slice(0,150)+'…';
+    return '<div class="pd-item'+(ad?' add':'')+'" role="button" tabindex="0" onclick="pdAdd('+t.id+')" onkeydown="if(event.key===\'Enter\')pdAdd('+t.id+')">'+
+      '<div class="pd-tools"><button class="ico" title="Editar" aria-label="Editar" onclick="event.stopPropagation();pdEditar('+t.id+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button></div>'+
+      '<div class="tt">'+esc(t.nome)+(t.tipo==='msg'?'<span class="tag t-msg">mensagem pronta</span>':'')+(t.revisar?'<span class="tag t-rev">revisar</span>':'')+(t.modalidade==='cs'?'<span class="tag t-cs">consórcio</span>':'')+(ad?'<span style="font-size:12px;color:var(--teal-ink)">adicionado</span>':'')+'</div>'+
+      '<div class="pv">'+esc(pv)+'</div></div>';
+  }).join(''):'<div style="color:var(--muted);font-size:14px;padding:20px">Nada encontrado. Tente outra palavra.</div>';
+}
+function pdAdd(id){
+  var t=D.textos.find(function(x){return x.id===id;});if(!t)return;
+  var k=PD.add.indexOf(id);
+  if(k>=0)PD.add.splice(k,1);
+  else if(t.tipo==='msg')PD.add=[id];
+  else{PD.add=PD.add.filter(function(j){var x=D.textos.find(function(y){return y.id===j;});return x&&x.tipo!=='msg';});PD.add.push(id);}
+  pdLista();pdSaida();
+}
+function pdSaida(){
+  var t=pdTexto(),h='';
+  if(!t.b){$('pd-out').innerHTML='<div style="color:var(--muted);text-align:center;padding:40px 10px;white-space:normal">Clique nos textos da esquerda para montar a pendência.</div>';return;}
+  if(t.h)h+='<div class="hf">'+marcar(t.h)+'</div>\n';
+  h+='<div>'+marcar(t.b)+'</div>';
+  if(t.f)h+='\n<div class="hf">'+marcar(t.f)+'</div>';
+  $('pd-out').innerHTML=h;
+}
+function pdCopiar(btn){var t=pdTexto();if(!t.b)return;copiar(limparCopia([t.h,t.b,t.f].filter(Boolean).join('\n\n')),btn);}
+function pdEditar(id){
+  var t=id?D.textos.find(function(x){return x.id===id;}):{canal:PD.canal==='wa'?'wa':'tr',modalidade:'*',tipo:'item',revisar:false,nome:'',texto:''};
+  var sel=function(nm,ops,v){return '<select class="inp" id="'+nm+'">'+ops.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';};
+  $('modal-root').innerHTML='<div class="ov" onclick="if(event.target===this)fecharModal()"><div class="modal" role="dialog" aria-label="Texto de pendência">'+
+   '<b style="font-size:20px">'+(id?'Editar texto':'Novo texto')+'</b>'+
+   '<label class="fld"><span>Nome (como aparece na lista)</span><input class="inp" id="e-nome" value="'+esc(t.nome)+'"></label>'+
+   '<div class="row" style="gap:10px">'+
+    '<label class="fld" style="flex:1 1 150px"><span>Canal</span>'+sel('e-canal',[['tr','Tradicional / Funding'],['wa','WhatsApp']],t.canal)+'</label>'+
+    '<label class="fld" style="flex:1 1 150px"><span>Vale para</span>'+sel('e-mod',[['*','Todos'],['fin','Só financiamento'],['cs','Só consórcio'],['fd','Só Funding']],t.modalidade)+'</label>'+
+    '<label class="fld" style="flex:1 1 150px"><span>Tipo</span>'+sel('e-tipo',[['item','Item (começa com "-")'],['msg','Mensagem pronta']],t.tipo)+'</label></div>'+
+   '<label class="fld"><span>Texto · use [EM MAIÚSCULO] para o que precisa trocar</span><textarea class="inp" id="e-texto" rows="8">'+esc(t.texto)+'</textarea></label>'+
+   (id?'<label style="display:flex;gap:8px;align-items:center;font-size:14px"><input type="checkbox" id="e-rev"'+(t.revisar?' checked':'')+'> Marcar como "revisar"</label>':'')+
+   '<div class="err" id="e-err"></div>'+
+   '<div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">'+(id?'<button class="btn2" style="color:#A32D2D" onclick="pdExcluir('+id+')">Excluir</button>':'<span></span>')+
+   '<div style="display:flex;gap:8px"><button class="btn2" onclick="fecharModal()">Cancelar</button><button class="btn" onclick="pdSalvar('+(id||0)+')">Salvar</button></div></div></div></div>';
+  $('e-nome').focus();
+}
+function fecharModal(){$('modal-root').innerHTML='';}
+async function pdSalvar(id){
+  var o={nome:$('e-nome').value.trim(),canal:$('e-canal').value,modalidade:$('e-mod').value,tipo:$('e-tipo').value,texto:$('e-texto').value.trim()};
+  if(!o.nome||!o.texto){$('e-err').textContent='Preencha o nome e o texto.';return;}
+  if(o.tipo==='item'&&!/^-/.test(o.texto)){$('e-err').textContent='Itens precisam começar com "-".';return;}
+  if(id)o.revisar=$('e-rev').checked;
+  try{
+    if(id){var r=await db('pend_textos?id=eq.'+id,{method:'PATCH',body:JSON.stringify(o)});var i=D.textos.findIndex(function(x){return x.id===id;});if(r&&r[0])D.textos[i]=r[0];}
+    else{o.ordem=(D.textos.reduce(function(m,x){return Math.max(m,x.ordem||0);},0))+1;var r2=await db('pend_textos',{method:'POST',body:JSON.stringify(o)});if(r2&&r2[0])D.textos.push(r2[0]);}
+    fecharModal();vPend();
+  }catch(e){$('e-err').textContent='Não consegui salvar: '+e.message;}
+}
+async function pdExcluir(id){
+  if(!confirm('Excluir este texto?'))return;
+  try{await db('pend_textos?id=eq.'+id,{method:'DELETE'});D.textos=D.textos.filter(function(x){return x.id!==id;});PD.add=PD.add.filter(function(x){return x!==id;});fecharModal();vPend();}
+  catch(e){$('e-err').textContent='Não consegui excluir: '+e.message;}
+}
+
+/* ====== ROTEIROS (v1: links extras; PDFs na v2) ====== */
+function vRot(){
+  $('view').innerHTML=cab('Roteiros','Os PDFs do mês com índice, busca e comparação chegam na versão 2.')+
+   '<div class="row" style="margin-top:16px">'+
+   '<section class="card" style="flex:2 1 380px"><b style="font-size:18px">Na versão 2</b><p style="color:var(--muted);line-height:1.6">Você sobe o PDF do mês, a Bancada lê o índice e os links e mostra o que mudou em relação ao mês anterior. Os arquivos ficam num armazenamento privado do Supabase, só com o seu login.</p></section>'+
+   '<section class="card" style="flex:1 1 280px;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links extras</b>'+
+   (D.links.length?D.links.map(function(l){return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="text-decoration:none;background:var(--soft);border-radius:14px;padding:9px 12px;display:block"><b style="display:block;font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="font-size:12px;color:var(--muted)">'+esc(l.s)+'</span></a>';}).join(''):'<span style="color:var(--muted)">Nenhum link.</span>')+
+   '</section></div>';
+}
+
+/* ====== SIMULADOR ====== */
+var SM={mod:'cs',cv:'890590',av:'887000',disp:'437121.01',tar:'550',fin:'400000',decl:'420000',saldo:'468075.77',iq:true,boleto:'210000',tot:false,dif:'fin'};
+function smSet(k,v){SM[k]=v;smCalc();}
+function smTog(k,v){SM[k]=v;vSim();}
+function vSim(){
+  var cs=SM.mod==='cs';
+  var campo=function(k,l){return '<label class="fld"><span>'+l+'</span><span class="mny"><span style="color:var(--muted);font-weight:700">R$</span><input type="number" step="0.01" value="'+esc(SM[k])+'" oninput="smSet(\''+k+'\',this.value)"></span></label>';};
+  var mini=function(lista,ativo,k){return '<div class="seg" style="align-self:flex-start">'+lista.map(function(b){return '<button class="'+(b[0]===ativo?'on':'')+'" onclick="smTog(\''+k+'\','+JSON.stringify(b[0]).replace(/"/g,"&quot;")+')">'+b[1]+'</button>';}).join('')+'</div>';};
+  var h=cab('Simulador do teto do FGTS','Sem cadastrar operação. Serve para financiamento e consórcio.',mini([['fin','Financiamento'],['cs','Consórcio']],SM.mod,'mod'));
+  h+='<div class="row" style="margin-top:16px"><section class="card" style="flex:1 1 280px;max-width:380px;display:flex;flex-direction:column;gap:14px"><b style="font-size:16px">Dados da operação</b>';
+  h+=campo('cv','Compra e venda')+campo('av','Avaliação');
+  h+=cs?campo('disp','Valor disponível da carta no dia')+campo('tar','Tarifas a descontar'):campo('fin','Valor financiado na proposta')+campo('decl','FGTS informado no formulário');
+  h+=campo('saldo','Saldo no extrato do FGTS');
+  if(!cs){h+='<div class="fld" style="border-top:1px solid var(--line2);padding-top:14px"><span>Utilização total do FGTS?</span>'+mini([[true,'Sim'],[false,'Não']],SM.tot,'tot')+'</div>';
+    if(SM.tot)h+='<div class="fld"><span>Diferença a maior no extrato aplicada no:</span>'+mini([['fin','Financiamento'],['rp','Recursos próprios']],SM.dif,'dif')+'</div>';}
+  h+='<div class="fld" style="border-top:1px solid var(--line2);padding-top:14px"><span>Tem Interveniente Quitante?</span>'+mini([[true,'Sim'],[false,'Não']],SM.iq,'iq')+'</div>';
+  if(SM.iq)h+=campo('boleto','Saldo devedor do vendedor (boleto do IQ)');
+  h+='<span style="font-size:12px;color:var(--muted);line-height:1.5">'+(cs?'MMP 4.1.4 e 3.3.2: a carta ocupa o lugar do financiamento.':'MMP 4.1.4: FGTS + financiamento ≤ menor valor entre compra e venda e avaliação.')+'</span></section>';
+  h+='<section id="sm-res" style="flex:2 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px"></section></div>';
+  $('view').innerHTML=h;smCalc();
+}
+function smCalc(){
+  var cs=SM.mod==='cs',CV=num(SM.cv),AV=num(SM.av),S=num(SM.saldo),D2=num(SM.decl),F0=num(SM.fin);
+  var teto=Math.min(CV,AV),quem=CV<=AV?'compra e venda':'avaliação',P,disp;
+  if(cs){P=Math.max(0,num(SM.disp)-num(SM.tar));disp=S;}
+  else if(SM.tot&&SM.dif==='fin'){P=Math.max(0,F0-Math.max(0,S-D2));disp=S;}
+  else if(SM.tot){P=F0;disp=S;}
+  else{P=F0;disp=Math.min(D2,S);}
+  var nome=cs?'carta':'financiamento',esp=Math.max(0,teto-P),fg=Math.min(disp,esp),fica=Math.max(0,S-fg),pUsa=Math.min(P,CV),prop=Math.max(0,CV-pUsa-fg);
+  var mudou=!cs&&P!==F0;
+  var seg=function(parts){var tot=parts.reduce(function(a,x){return a+x.v;},0)||1;return '<div class="bar">'+parts.filter(function(x){return x.v>0;}).map(function(x){return '<div style="flex:'+Math.max(14,x.v/tot*100)+' 1 0;background:'+x.c+';color:'+(x.t||'#fff')+'">'+x.l+' · '+R2(x.v)+'</div>';}).join('')+'</div>';};
+  var passo=function(n,t,c,b){return '<div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span class="num" style="background:var(--bg);border:0">'+n+'</span><b style="font-size:16px">'+t+'</b></div><div class="calc">'+c+'</div>'+(b||'')+'</div>';};
+  var h='<div class="tiles"><div class="tile"><small>FGTS no saque</small><div style="color:#3D6E12">'+R2(fg)+'</div><small style="font-weight:500">'+(fica>0?R2(fica)+' ficam na conta':'todo o saldo cabe')+'</small></div>'+
+   '<div class="tile"><small>'+(cs?'Carta':'Financiamento')+'</small><div style="color:#0F5E54">'+R2(P)+'</div><small style="font-weight:500">'+(cs?'disponível − tarifas':(mudou?'era '+R2(F0)+' na proposta':'valor financiado'))+'</small></div>'+
+   '<div class="tile"><small>Recursos próprios</small><div>'+R2(prop)+'</div><small style="font-weight:500">do bolso do comprador</small></div></div>';
+  h+=passo(1,'Qual é o teto?','menor entre compra e venda ('+R2(CV)+') e avaliação ('+R2(AV)+') = '+R2(teto)+' · '+quem);
+  h+=passo(2,'Quanto '+(cs?'a carta':'o financiamento')+' ocupa e quanto sobra para o FGTS?',R2(teto)+' − '+R2(P)+' de '+nome+' = '+R2(esp)+' de espaço',seg([{l:cs?'Carta':'Financiamento',v:Math.min(P,teto),c:'#0F6E62'},{l:'Espaço FGTS',v:esp,c:'#B9DC8C',t:'#1F3A05'}]));
+  h+=passo(3,'Quanto FGTS entra de fato?',(cs||SM.tot?'saldo ':'FGTS informado ')+R2(disp)+' × espaço '+R2(esp)+' → entra '+R2(fg),seg([{l:'Entra',v:fg,c:'#B9DC8C',t:'#1F3A05'},{l:'Fica na conta',v:fica,c:'#E7A27E',t:'#4A1B0C'}]));
+  h+=passo(4,'Quanto sai do bolso?',R2(CV)+' − '+R2(pUsa)+' − '+R2(fg)+' = '+R2(prop));
+  if(!cs&&prop<0.005&&fg<S-0.005)h+='<div class="box b-err"><b style="font-size:16px">Sem recursos próprios: tem que usar 100% do FGTS</b><span style="font-weight:600">Vai usar '+R2(fg)+' de um saldo de '+R2(S)+'. Sem dinheiro próprio, o DAMP é rejeitado (518). Use o saldo integral ou complemente com recursos próprios.</span></div>';
+  if(mudou)h+='<div class="box b-info"><b style="font-size:16px">O valor financiado muda</b><div class="calc" style="background:rgba(255,255,255,.7)">'+R2(F0)+' − '+R2(Math.max(0,S-D2))+' de diferença no extrato = '+R2(P)+'</div><span style="font-weight:600">A operação volta para todas as áreas (documental e crédito) para ajustar o valor do financiamento.</span></div>';
+  if(SM.iq){
+    var B=num(SM.boleto),aplica=cs||fg>0,cobre=pUsa>=B,ok=!aplica||cobre;
+    var msg=!aplica?'Sem FGTS nesta operação: o aviso FGTS + IQ não se aplica.':(cobre?'Cobre o saldo devedor. Sobram '+R2(Math.max(0,pUsa-B))+' de '+nome+' para o vendedor.':(cs?'Não cobre: faltam '+R2(B-pUsa)+' de carta. FGTS e recursos próprios não podem completar o boleto.':'Não cobre: faltam '+R2(B-pUsa)+'. O financiamento precisa ser igual ou maior que o saldo devedor, e o FGTS não pode complementar a liquidação.'));
+    h+='<div class="box '+(!aplica?'b-off':(ok?'b-ok':'b-err'))+'"><b style="font-size:16px">'+(cs?'Regra do IQ: o boleto é pago só com a carta':'Regra FGTS + IQ: o financiamento cobre o saldo devedor')+'</b><div class="calc" style="background:rgba(255,255,255,.7)">'+R2(pUsa)+' de '+nome+(cobre?' ≥ ':' < ')+R2(B)+' de saldo devedor</div><span style="font-weight:700">'+msg+'</span>'+
+     '<span style="font-size:13px;font-weight:700;margin-top:4px">Para onde vai o dinheiro</span>'+seg([{l:'Banco do IQ',v:Math.min(B,pUsa),c:'#0F6E62'},{l:'Falta '+nome,v:Math.max(0,B-pUsa),c:'#B3261E'},{l:'Vendedor ('+(cs?'carta':'financ.')+')',v:Math.max(0,pUsa-B),c:'#2E8C80'},{l:'Vendedor (FGTS)',v:fg,c:'#B9DC8C',t:'#1F3A05'},{l:'Vendedor (próprios)',v:prop,c:'#5F5E5A'}])+'</div>';
+  }
+  if(P>=teto)h+='<div class="box b-ok" style="background:#FDEBD3;border-color:#F3C99A;color:#6B3A00;font-weight:600">O '+nome+' já ocupa o teto inteiro: não cabe FGTS nesta operação.</div>';
+  else if(fica>0)h+='<div class="box b-ok" style="background:#FDEBD3;border-color:#F3C99A;color:#6B3A00;font-weight:600">'+R2(fica)+' de FGTS ficam fora desta operação e permanecem na conta vinculada.</div>';
+  $('sm-res').innerHTML=h;
+}
+
+/* ====== CONSÓRCIO ====== */
+var CS={i:0};
+function vCons(){
+  var cur=CONS_TOP[CS.i];
+  $('view').innerHTML=cab('Consórcio','Os conceitos para consultar rápido, sem abrir outro arquivo.')+
+   '<div class="row" style="margin-top:16px"><section class="card" style="flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px">'+
+   '<div style="display:flex;justify-content:center"><div style="background:#1F2329;color:#fff;border-radius:999px;padding:12px 28px;text-align:center"><b style="font-size:20px;display:block">Cota</b><span style="font-size:12px;color:#D3D6DC">de consórcio</span></div></div>'+
+   '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">'+CONS_TOP.map(function(t,i){return '<button onclick="CS.i='+i+';vCons()" style="display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border-radius:18px;padding:12px 14px;background:'+t.b+';border:2px solid '+(i===CS.i?t.c:'transparent')+'"><b style="font-size:15px">'+esc(t.t)+'</b><span style="font-size:12px;color:#4F555E">'+esc(t.s)+'</span></button>';}).join('')+'</div></section>'+
+   '<section class="card" style="flex:1 1 420px;min-width:0;display:flex;flex-direction:column;gap:14px"><div style="display:flex;align-items:center;gap:10px"><span style="width:14px;height:14px;border-radius:5px;background:'+cur.c+'"></span><b style="font-size:22px">'+esc(cur.t)+'</b></div>'+
+   '<div style="background:#FAEEDA;color:#4A3200;border-radius:16px;padding:14px 16px;line-height:1.55"><b>Ideia-chave:</b> '+esc(cur.ideia)+'</div>'+
+   cur.pts.map(function(p,i){return '<div class="step"><span class="num">'+(i+1)+'</span><span style="font-size:14px;line-height:1.5">'+esc(p)+'</span></div>';}).join('')+
+   (cur.t==='FGTS'?'<button class="btn" style="align-self:flex-start" onclick="SM.mod=\'cs\';ir(\'sim\')">Abrir o simulador do teto do FGTS</button>':'')+
+   '<a href="consorcio.html" target="_blank" rel="noopener" style="font-size:14px;font-weight:700">Abrir o material completo, com os simuladores →</a></section></div>';
+}
+
+/* ====== CERTIFICADOS ====== */
+var CT={ans:[]};
+var QS=[{t:'Já tem ICP-Brasil válido?',sim:'icp'},{t:'É estrangeiro?',sim:'enot'},{t:'Registro civil em dia?',sim:'idrc',nao:'enot'}];
+function ctRes(){for(var i=0;i<CT.ans.length;i++){if(CT.ans[i]==='s')return QS[i].sim;if(i===2&&CT.ans[i]==='n')return 'enot';}return null;}
+function ctResp(i,v){if(i===CT.ans.length&&!ctRes()){CT.ans.push(v);vCert();}}
+function vCert(){
+  var res=ctRes(),rc=CERTS.find(function(c){return c.k===res;});
+  var qs=QS.map(function(q,i){var at=!res&&i===CT.ans.length,feita=i<CT.ans.length;
+    var b=function(v,l){var on=CT.ans[i]===v;return '<button class="btn2 btn-sm" style="'+(on?'background:#1F2329;color:#fff;border-color:#1F2329':'')+'" onclick="ctResp('+i+',\''+v+'\')">'+l+'</button>';};
+    return '<div style="display:flex;align-items:center;gap:12px;border-radius:18px;padding:10px 14px;'+(at?'background:var(--bg);border:1px solid #CFCBC2':(feita?'background:#fff;border:1px solid var(--line2);opacity:.75':'background:#fff;border:1px dashed #DDDAD3;opacity:.45'))+'"><b style="font-size:15px">'+(i+1)+'. '+q.t+'</b><span style="display:flex;gap:6px">'+b('s','Sim')+b('n','Não')+'</span></div>';}).join('');
+  $('view').innerHTML=cab('Certificados','Responda as perguntas e veja qual tipo indicar.')+
+   '<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:14px"><b style="font-size:18px">Qual certificado usar?</b><div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">'+qs+
+   (rc?'<div style="border-radius:18px;padding:8px 16px;background:'+rc.b+';color:'+rc.c+'"><small style="display:block;font-weight:700">Usar</small><b style="font-size:20px">'+rc.t+'</b></div>':'')+
+   '<button class="btn2 btn-sm" onclick="CT.ans=[];vCert()">Recomeçar</button></div></section>'+
+   '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:16px">'+CERTS.map(function(c){var on=res===c.k;
+     return '<section style="background:#fff;border-radius:24px;padding:20px;display:flex;flex-direction:column;gap:6px;border:'+(on?'2px solid '+c.c:'1px solid var(--line)')+';opacity:'+(res&&!on?'.55':'1')+'">'+
+      '<b style="font-size:20px">'+c.t+'</b><span style="align-self:flex-start;font-size:13px;font-weight:600;color:'+c.c+';background:'+c.b+';border-radius:999px;padding:3px 10px">"'+c.apel+'"</span>'+
+      '<small style="font-weight:700;color:#4F555E;margin-top:6px">Como emite</small>'+c.como.map(function(x,i){return '<span style="font-size:14px">'+(i+1)+'. '+esc(x)+'</span>';}).join('')+
+      '<small style="font-weight:700;color:#4F555E;margin-top:6px">Melhor quando</small>'+c.melhor.map(function(x){return '<span style="font-size:14px">· '+esc(x)+'</span>';}).join('')+
+      '<small style="font-weight:700;color:#4F555E;margin-top:6px">Pesa contra</small><span style="font-size:14px">'+esc(c.contra)+'</span></section>';}).join('')+'</div>'+
+   '<div class="note" style="margin-top:16px"><b>Validade:</b> o certificado emitido na Uniproof vale 1 ano.</div>';
+}
+
+/* ====== ASSISTENTE (v2) ====== */
+function vIA(){
+  $('view').innerHTML=cab('Assistente','Textos e dúvidas sem precisar passar pelo celular.')+
+   '<section class="card" style="margin-top:16px;line-height:1.6"><b style="font-size:18px">Na versão 2</b><p style="color:var(--muted)">Dois modos: melhorar texto (e-mail, WhatsApp, pendência formal) e tirar dúvida com base na legislação. Antes, a gente testa se a rede do banco libera o acesso.</p></section>';
+}
+
+/* ====== INTERMEDIAÇÃO ====== */
+var IN={tab:'iq',path:'gpo'};
+var RXSIG=null;
+function sigRx(){if(RXSIG)return RXSIG;var ks=Object.keys(D.inter.sig).sort(function(a,b){return b.length-a.length;}).map(function(k){return k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');});RXSIG=new RegExp('(^|[^A-Za-z0-9])('+ks.join('|')+')(?![A-Za-z0-9])','g');return RXSIG;}
+function comSiglas(txt,usadas){
+  var rx=sigRx(),out='',last=0,m;rx.lastIndex=0;
+  while((m=rx.exec(txt))){var st=m.index+m[1].length;out+=esc(txt.slice(last,st))+'<abbr title="'+esc(D.inter.sig[m[2]])+'">'+esc(m[2])+'</abbr>';usadas[m[2]]=1;last=st+m[2].length;}
+  return out+esc(txt.slice(last));
+}
+function passosHtml(lista,start,usadas){
+  return lista.map(function(s,i){
+    return '<div class="step"><span class="num">'+(start+i+1)+'</span><div style="min-width:0;display:flex;flex-direction:column;gap:4px"><b>'+comSiglas(s.t,usadas)+'</b>'+
+      s.d.map(function(l){return '<p>'+comSiglas(l,usadas)+'</p>';}).join('')+
+      (s.code?'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="code">'+comSiglas(s.code,usadas)+'</span><button class="btn2 btn-sm" onclick="copiar('+esc(JSON.stringify(s.code))+',this)">Copiar</button></div>':'')+'</div></div>';
+  }).join('');
+}
+function vInt(){
+  if(!D.inter){$('view').innerHTML=cab('Roteiros da intermediação','')+'<div class="note" style="margin-top:16px">Conteúdo não encontrado no banco. Rode o SQL da Bancada.</div>';return;}
+  var I=D.inter,us={},h='';
+  if(IN.tab==='iq'){
+    var P=I.iqPaths[IN.path],a=I.iqIni.length,b=P.steps.length;
+    h+='<div class="sec-t">ANTES DE TUDO</div>'+passosHtml(I.iqIni,0,us)+'<div class="sec-t">'+esc(P.n.toUpperCase())+'</div>'+passosHtml(P.steps,a,us)+'<div class="sec-t">PARA TODOS OS CAMINHOS</div>'+passosHtml(I.iqFim,a+b,us);
+  } else h+=passosHtml(I[IN.tab],0,us);
+  var sig=Object.keys(us).sort();
+  $('view').innerHTML=cab('Roteiros da intermediação','Só o passo a passo. Uma fonte única para consultar e para treinar.')+
+   '<div style="margin-top:16px">'+segHtml([['port','Portabilidade'],['cert','Certificação'],['iq','Interveniente Quitante'],['fgts','FGTS']],IN.tab,'inTab')+'</div>'+
+   (IN.tab==='iq'?'<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px"><b style="font-size:13px;color:var(--ink2)">Caminho do IQ:</b>'+I.pathOrder.map(function(k){return '<button class="chip'+(IN.path===k?' on':'')+'" onclick="IN.path=\''+k+'\';vInt()">'+esc(I.iqPaths[k].n)+'</button>';}).join('')+'</div>':'')+
+   '<div class="row" style="margin-top:16px"><section class="card" style="flex:2 1 480px;min-width:0;display:flex;flex-direction:column;gap:10px">'+h+'</section>'+
+   '<aside class="card" style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Siglas desta aba</b><span style="font-size:12px;color:var(--muted)">No texto, passe o mouse na sigla sublinhada.</span>'+
+   sig.map(function(k){return '<div style="background:var(--soft);border-radius:12px;padding:8px 12px"><b style="font-size:13px;color:var(--teal-ink);display:block">'+esc(k)+'</b><span style="font-size:12px;line-height:1.45;color:var(--ink2)">'+esc(I.sig[k])+'</span></div>';}).join('')+'</aside></div>';
+}
+function inTab(t){IN.tab=t;vInt();}
+
+/* ====== BUSCA GERAL ====== */
+function buscar(q){
+  var box=$('results');if(semAc(q).trim().length<2){box.classList.add('hide');return;}
+  var hits=[];
+  D.textos.forEach(function(t){if(casa(t.nome+' '+t.texto,q))hits.push({g:'Pendência · '+(t.canal==='wa'?'WhatsApp':'Tradicional'),t:t.nome,s:t.texto,go:function(){PD.q=q;PD.mod=t.modalidade==='cs'?'cs':'fin';PD.canal=t.canal==='wa'?'wa':(t.modalidade==='fd'?'fd':'tr');ir('pend');}});});
+  if(D.inter){var I=D.inter,add=function(tab,path,s,rot){if(casa(s.t+' '+s.d.join(' ')+' '+(s.code||''),q))hits.push({g:'Intermediação · '+rot,t:s.t,s:s.d.join(' '),go:function(){IN.tab=tab;if(path)IN.path=path;ir('int');}});};
+    [['port','Portabilidade'],['cert','Certificação'],['fgts','FGTS']].forEach(function(x){I[x[0]].forEach(function(s){add(x[0],null,s,x[1]);});});
+    I.iqIni.concat(I.iqFim).forEach(function(s){add('iq',null,s,'IQ');});
+    Object.keys(I.iqPaths).forEach(function(k){I.iqPaths[k].steps.forEach(function(s){add('iq',k,s,'IQ · '+I.iqPaths[k].n);});});}
+  CONS_TOP.forEach(function(t,i){if(casa(t.t+' '+t.ideia+' '+t.pts.join(' '),q))hits.push({g:'Consórcio',t:t.t,s:t.ideia,go:function(){CS.i=i;ir('cons');}});});
+  CERTS.forEach(function(c){if(casa(c.t+' '+c.como.join(' ')+' '+c.melhor.join(' ')+' '+c.contra,q))hits.push({g:'Certificados',t:c.t,s:c.melhor.join(' · '),go:function(){ir('cert');}});});
+  window._hits=hits.slice(0,30);
+  box.innerHTML=window._hits.length?window._hits.map(function(h,i){var s=h.s.replace(/\s+/g,' ');if(s.length>140)s=s.slice(0,140)+'…';return '<button class="res" onclick="abrirHit('+i+')"><small>'+esc(h.g)+'</small><b>'+esc(h.t)+'</b><span>'+esc(s)+'</span></button>';}).join(''):'<div style="padding:12px;color:var(--muted)">Nada encontrado.</div>';
+  box.classList.remove('hide');
+}
+function abrirHit(i){var h=window._hits[i];$('results').classList.add('hide');$('q-geral').value='';h.go();}
+$('q-geral').oninput=function(){buscar(this.value);};
+$('q-geral').onkeydown=function(e){if(e.key==='Escape'){this.value='';$('results').classList.add('hide');}};
+document.addEventListener('click',function(e){if(!e.target.closest('.search-top'))$('results').classList.add('hide');});
+document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('q-geral').focus();}if(e.key==='Escape')fecharModal();});
+
+/* ====== INÍCIO ====== */
+async function iniciar(){
+  $('login').classList.add('hide');$('app').classList.remove('hide');
+  $('who').textContent=sessao.email||'';
+  $('view').innerHTML='<div class="note">Carregando...</div>';
+  try{atual=localStorage.getItem('bancada_mod')||'pend';}catch(e){}
+  renderNav();
+  try{await carregar();render();}
+  catch(e){if(/sessão|sem sessão/.test(e.message)){sair();return;}$('view').innerHTML='<div class="note">Não consegui carregar os dados: '+esc(e.message)+'</div>';}
+}
+(function(){sessao=lerSessao();if(sessao)iniciar();else mostrarLogin();})();
+</script>
+</body>
+</html>

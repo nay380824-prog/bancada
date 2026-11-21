@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consórcio descomplicado — mapa dos conceitos</title>
+<link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#ffffff; --card:#ffffff; --ink:#1d2a44; --muted:#5d6779; --line:#e4ded4;
+  --teal:#0f9b8e; --teal-l:#d9f2ef; --coral:#f2694a; --coral-l:#fde4dc;
+  --lav:#7a6cf0; --lav-l:#e9e6fd; --gold:#d99a22; --gold-l:#fbeed3;
+  --navy-l:#e3e8f2; --green:#2f9e5b; --green-l:#dcf3e5; --red:#d64545; --red-l:#fbe1e1;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Urbanist,system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:17px}
+header.hero{padding:42px 24px 26px;text-align:center}
+header.hero h1{font-size:clamp(28px,4.5vw,44px);margin:0 0 6px;font-weight:800;letter-spacing:-.5px}
+header.hero p{margin:0 auto;max-width:640px;color:var(--muted)}
+nav.top{position:sticky;top:0;z-index:20;background:rgba(255,255,255,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);display:flex;gap:6px;overflow-x:auto;padding:10px 16px;justify-content:center;flex-wrap:wrap}
+nav.top a{text-decoration:none;color:var(--ink);font-weight:600;font-size:14px;padding:6px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);white-space:nowrap}
+nav.top a:hover{background:var(--ink);color:#fff}
+main{max-width:1200px;margin:0 auto;padding:0 18px 80px}
+section{margin-top:46px;scroll-margin-top:70px}
+.sec-head{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.sec-num{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;flex:none}
+.sec-head h2{margin:0;font-size:clamp(22px,3vw,30px);font-weight:800}
+.sec-head small{display:block;color:var(--muted);font-weight:500;font-size:15px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
+.big{font-size:20px;font-weight:700}
+.muted{color:var(--muted)}
+.tag{display:inline-block;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;letter-spacing:.3px;text-transform:uppercase}
+.idea{border-left:5px solid var(--gold);background:var(--gold-l);padding:12px 16px;border-radius:10px;margin-top:12px}
+.idea b{color:#8a5d00}
+.warn{border-left:5px solid var(--coral);background:var(--coral-l);padding:12px 16px;border-radius:10px;margin-top:12px}
+.ok{border-left:5px solid var(--teal);background:var(--teal-l);padding:12px 16px;border-radius:10px;margin-top:12px}
+.emoji{font-size:28px;line-height:1}
+
+/* mapa */
+#mapa svg{width:100%;height:auto;display:block}
+.node{cursor:pointer}
+.node rect{transition:transform .15s}
+.node:hover rect{filter:brightness(.95)}
+.node text{font-family:Urbanist,sans-serif;pointer-events:none}
+
+/* jornada */
+.journey{display:flex;gap:0;overflow-x:auto;padding:6px 2px 14px}
+.step{flex:1 1 0;min-width:0;position:relative;padding:0 8px;text-align:center;cursor:pointer}
+.step .dot{width:54px;height:54px;border-radius:50%;margin:0 auto 8px;display:grid;place-items:center;font-size:24px;background:#fff;border:3px solid var(--teal);position:relative;z-index:2;transition:.15s}
+.step.active .dot{background:var(--teal);transform:scale(1.1)}
+.step:not(:last-child)::after{content:"";position:absolute;top:27px;left:50%;width:100%;height:3px;background:var(--teal);opacity:.35;z-index:1}
+.step b{display:block;font-size:15px}
+.step span{font-size:13px;color:var(--muted)}
+#stepInfo{margin-top:6px;min-height:90px}
+@media(max-width:820px){.journey{display:grid;grid-template-columns:repeat(4,1fr);row-gap:16px;overflow:visible}.step::after{display:none}}
+
+/* parcela */
+.stack{display:flex;height:64px;border-radius:12px;overflow:hidden;margin:14px 0 8px;font-weight:700;color:#fff;font-size:14px}
+.stack div{display:grid;place-items:center;text-align:center;padding:0 4px}
+.legend{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.legend .it{display:flex;gap:10px;align-items:flex-start}
+.sw{width:16px;height:16px;border-radius:5px;flex:none;margin-top:4px}
+
+/* simuladores */
+label.f{display:block;font-weight:600;font-size:14px;margin:10px 0 4px}
+input[type=number],input[type=range]{width:100%}
+input[type=number]{font:inherit;padding:8px 10px;border-radius:10px;border:1px solid var(--line)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.seg button{font:inherit;font-weight:700;font-size:14px;padding:8px 14px;border-radius:999px;border:2px solid var(--line);background:#fff;cursor:pointer;color:var(--ink)}
+.seg button.on{border-color:var(--ink);background:var(--ink);color:#fff}
+.bars{margin-top:14px;display:grid;gap:10px}
+.bar{display:grid;grid-template-columns:170px 1fr;gap:10px;align-items:center;font-size:14px}
+.bar .track{background:#f1ede6;border-radius:8px;height:30px;position:relative;overflow:hidden}
+.bar .fill{height:100%;border-radius:8px;display:flex;align-items:center;padding-left:8px;color:#fff;font-weight:700;font-size:13px;white-space:nowrap;transition:width .35s}
+@media(max-width:560px){.bar{grid-template-columns:1fr}.cmp div{font-size:11px!important}.cmp div span{font-size:10px!important}}
+.result{font-size:15px;margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--navy-l)}
+
+/* fluxo dinheiro */
+.flow{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:10px 0 4px}
+.flow .bx{padding:7px 11px;border-radius:10px;font-weight:700;font-size:13px;background:var(--navy-l)}
+.flow .ar{color:var(--muted);font-weight:800}
+
+/* carta x imóvel */
+.cmp{height:46px;border-radius:12px;display:flex;overflow:hidden;margin-top:8px;font-size:13px;font-weight:700;color:#fff}
+.cmp div{display:grid;place-items:center;transition:width .3s;white-space:nowrap;overflow:hidden}
+
+/* saldo */
+.cells{display:grid;grid-template-columns:repeat(25,1fr);gap:3px;margin:10px 0}
+.cells i{aspect-ratio:1;border-radius:3px;background:#e8e2d8}
+.cells i.p{background:var(--teal)}
+.cells i.l{background:var(--lav)}
+
+/* quiz */
+.q{border:1px solid var(--line);border-radius:14px;padding:14px 16px;background:#fff}
+.q p{margin:0 0 10px;font-weight:600}
+.q .bt{display:flex;gap:8px}
+.q button{font:inherit;font-weight:700;padding:7px 16px;border-radius:999px;border:2px solid var(--line);background:#fff;cursor:pointer;color:var(--ink)}
+.q .ans{display:none;margin-top:10px;font-size:15px;padding:10px 12px;border-radius:10px}
+.q.right .ans{display:block;background:var(--green-l)}
+.q.wrong .ans{display:block;background:var(--red-l)}
+#score{font-weight:800}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:30px 16px}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <h1>Consórcio descomplicado 🧩</h1>
+  <p>Clique nos balões do mapa para ir direto ao assunto.</p>
+</header>
+
+<nav class="top">
+  <a href="#mapa">Mapa</a><a href="#jornada">Jornada</a><a href="#carta">Carta</a><a href="#parcela">Parcela</a>
+  <a href="#lances">Lances</a><a href="#uso">Uso do crédito</a><a href="#valores">4 valores</a><a href="#bate">Carta × imóvel</a>
+  <a href="#garantia">Garantia</a><a href="#saldo">Saldo devedor</a><a href="#fgts">FGTS</a>
+</nav>
+
+<main>
+
+<!-- MAPA -->
+<section id="mapa">
+  <div class="card" style="padding:10px">
+    <svg id="mindmap" viewBox="0 0 1000 600" role="img" aria-label="Mapa mental do consórcio"></svg>
+  </div>
+</section>
+
+<!-- JORNADA -->
+<section id="jornada">
+  <div class="sec-head"><div class="sec-num" style="background:var(--teal)">1</div>
+    <h2>A jornada da cota<small>Do dia que entra no grupo até quitar. Clique em cada etapa.</small></h2></div>
+  <div class="card">
+    <div class="journey" id="journey"></div>
+    <div id="stepInfo" class="ok"></div>
+  </div>
+</section>
+
+<!-- CARTA -->
+<section id="carta">
+  <div class="sec-head"><div class="sec-num" style="background:var(--lav)">2</div>
+    <h2>Carta de crédito (valor do crédito)<small>O “vale-imóvel” que o grupo entrega ao contemplado</small></h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <div class="emoji">🎟️</div>
+      <p class="big">Carta = preço do bem de referência no dia da contemplação</p>
+      <p>Quando a pessoa entra no grupo, ela não compra “R$ 200 mil”. Ela compra o direito a <b>um bem que hoje custa R$ 200 mil</b>. Se esse preço sobe, a carta sobe junto (e a parcela também).</p>
+      <p class="muted">O contrato diz como a carta é atualizada: ou pelo preço do próprio bem, ou por um índice (ex.: INCC, IPCA) numa periodicidade combinada.</p>
+    </div>
+    <div class="card">
+      <p class="big" style="margin-top:0">A carta “anda” no tempo</p>
+      <svg viewBox="0 0 460 220" style="width:100%">
+        <line x1="30" y1="180" x2="440" y2="180" stroke="#c9c1b4" stroke-width="2"/>
+        <rect x="45" y="110" width="60" height="70" rx="8" fill="#e9e6fd"/><text x="75" y="102" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a44">200 mil</text>
+        <text x="75" y="200" text-anchor="middle" font-size="12" fill="#5d6779">Adesão</text>
+        <rect x="145" y="96" width="60" height="84" rx="8" fill="#c9c2fa"/><text x="175" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a44">212 mil</text>
+        <text x="175" y="200" text-anchor="middle" font-size="12" fill="#5d6779">Reajuste</text>
+        <rect x="245" y="82" width="60" height="98" rx="8" fill="#7a6cf0"/><text x="275" y="74" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a44">220 mil</text>
+        <text x="275" y="200" text-anchor="middle" font-size="12" fill="#5d6779">Contemplação</text>
+        <rect x="345" y="76" width="60" height="104" rx="8" fill="#0f9b8e"/><text x="375" y="68" text-anchor="middle" font-size="13" font-weight="700" fill="#1d2a44">220 mil + 💰</text>
+        <text x="375" y="200" text-anchor="middle" font-size="12" fill="#5d6779">Uso</text>
+        <text x="325" y="30" text-anchor="middle" font-size="12" fill="#0f9b8e" font-weight="700">depois de contemplada,</text>
+        <text x="325" y="45" text-anchor="middle" font-size="12" fill="#0f9b8e" font-weight="700">a carta rende até ser usada</text>
+      </svg>
+      <div class="idea"><b>Ideia-chave:</b> antes da contemplação a carta acompanha o <b>preço do bem</b>. Depois, ela fica aplicada e ganha <b>rendimento financeiro</b> até o dia em que o dinheiro sai.</div>
+    </div>
+  </div>
+</section>
+
+<!-- PARCELA -->
+<section id="parcela">
+  <div class="sec-head"><div class="sec-num" style="background:var(--coral)">3</div>
+    <h2>A parcela (Contribuição Ordinária)<small>CO = Fundo Comum + Taxa de Administração + Fundo de Reserva + Seguro</small></h2></div>
+  <div class="card">
+    <div class="stack">
+      <div style="width:72%;background:var(--teal)">Fundo Comum</div>
+      <div style="width:14%;background:var(--coral)">Tx Adm</div>
+      <div style="width:7%;background:var(--gold)">FR</div>
+      <div style="width:7%;background:var(--lav)">Seg.</div>
+    </div>
+    <div class="legend">
+      <div class="it"><span class="sw" style="background:var(--teal)"></span><div><b>Fundo Comum (FC)</b><br><span class="muted">É a “vaquinha” do grupo. É daqui que sai o dinheiro das cartas. É a parte que de fato paga o bem.</span></div></div>
+      <div class="it"><span class="sw" style="background:var(--coral)"></span><div><b>Taxa de Administração (TA)</b><br><span class="muted">O “salário” da administradora por cuidar do grupo. Não é juros.</span></div></div>
+      <div class="it"><span class="sw" style="background:var(--gold)"></span><div><b>Fundo de Reserva (FR)</b><br><span class="muted">Colchão de segurança do grupo, para cobrir imprevistos (ex.: inadimplência). Só se o contrato prever.</span></div></div>
+      <div class="it"><span class="sw" style="background:var(--lav)"></span><div><b>Seguro (S)</b><br><span class="muted">Se previsto no contrato (ex.: seguro de vida que quita a cota).</span></div></div>
+    </div>
+    <div class="result">🧮 <b>Exemplo do curso:</b> carta de R$ 70.000, parcela de 2,3% ao mês → FC 2% (R$ 1.400) + TA 0,3% (R$ 210) = <b>R$ 1.610</b> por mês, em 50 meses.</div>
+    <div class="idea"><b>Por que a parcela é em %?</b> Porque ela é um pedaço do preço do bem. Se a carta reajusta, a parcela reajusta na mesma proporção. Por isso falamos em “% amortizado” e “% a pagar”.</div>
+  </div>
+</section>
+
+<!-- LANCES -->
+<section id="lances">
+  <div class="sec-head"><div class="sec-num" style="background:var(--gold)">4</div>
+    <h2>Contemplação e lances<small>Sorteio é sorte. Lance é “adiantar parcelas” para furar a fila.</small></h2></div>
+  <div class="grid g3" style="margin-bottom:14px">
+    <div class="card"><span class="tag" style="background:var(--teal-l);color:var(--teal)">Recursos próprios</span><p class="big">💵 Paga do bolso</p><p class="muted">Recebe a carta <b>inteira</b>. O dinheiro do lance abate o saldo devedor.</p></div>
+    <div class="card"><span class="tag" style="background:var(--coral-l);color:var(--coral)">Embutido</span><p class="big">✂️ Usa parte da própria carta</p><p class="muted">Não tira dinheiro do bolso, mas recebe <b>carta menor</b> (carta − lance). Também abate o saldo devedor.</p></div>
+    <div class="card"><span class="tag" style="background:var(--lav-l);color:var(--lav)">FGTS</span><p class="big">🏠 Usa o FGTS</p><p class="muted">Só em consórcio de imóvel, para moradia. A administradora libera carta − lance, e o FGTS vai <b>direto ao vendedor</b>. No fim, o total para comprar é a carta inteira.</p></div>
+  </div>
+  <div class="card">
+    <p class="big" style="margin-top:0">🎛️ Simulador de lance</p>
+    <div class="grid g2">
+      <div>
+        <label class="f">Valor da carta (R$)</label><input type="number" id="lc" value="70000" step="1000" min="0">
+        <label class="f">Valor do lance (R$)</label><input type="number" id="ll" value="16100" step="500" min="0">
+      </div>
+      <div>
+        <label class="f">Tipo de lance</label>
+        <div class="seg" id="ltype">
+          <button data-t="proprio" class="on">Recursos próprios</button>
+          <button data-t="embutido">Embutido</button>
+          <button data-t="fgts">FGTS</button>
+        </div>
+      </div>
+    </div>
+    <div class="bars" id="lbars"></div>
+    <div class="result" id="lres"></div>
+  </div>
+</section>
+
+<!-- USO -->
+<section id="uso">
+  <div class="sec-head"><div class="sec-num" style="background:var(--teal)">5</div>
+    <h2>Para onde vai o crédito<small>Siga o caminho do dinheiro em cada tipo de operação</small></h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <span class="tag" style="background:var(--teal-l);color:var(--teal)">Aquisição</span>
+      <p class="big">🏡 Comprar imóvel (pronto, terreno, na planta)</p>
+      <div class="flow"><span class="bx">Administradora</span><span class="ar">→</span><span class="bx" style="background:var(--green-l)">Vendedor</span></div>
+      <p class="muted">O dinheiro <b>nunca passa pela mão do consorciado</b>: a administradora paga direto a quem vende.</p>
+    </div>
+    <div class="card">
+      <span class="tag" style="background:var(--lav-l);color:var(--lav)">Aquisição com IQ</span>
+      <p class="big">🔗 Comprar imóvel que o vendedor ainda está financiando</p>
+      <div class="flow"><span class="bx">Administradora</span><span class="ar">→</span><span class="bx" style="background:var(--lav-l)">Banco do vendedor (quita)</span><span class="ar">+</span><span class="bx" style="background:var(--green-l)">Vendedor (o resto)</span></div>
+      <p class="muted">O banco do vendedor é o <b>Interveniente Quitante</b>: recebe a parte que quita a dívida do vendedor e libera o imóvel (baixa da garantia dele), para que o imóvel possa ir para o comprador.</p>
+    </div>
+    <div class="card">
+      <span class="tag" style="background:var(--gold-l);color:#8a5d00">Quitação</span>
+      <p class="big">💳 Quitar financiamento próprio</p>
+      <div class="flow"><span class="bx">Administradora</span><span class="ar">→</span><span class="bx" style="background:var(--gold-l)">Banco onde o consorciado tem a dívida</span></div>
+      <p class="muted">Só vale para quitar <b>totalmente</b> um financiamento <b>no nome do próprio consorciado</b>, e do mesmo tipo de bem da carta (carta de imóvel quita financiamento de imóvel).</p>
+    </div>
+    <div class="card">
+      <span class="tag" style="background:var(--coral-l);color:var(--coral)">Construção / reforma</span>
+      <p class="big">🧱 Construir ou reformar</p>
+      <div class="flow"><span class="bx">Administradora</span><span class="ar">→</span><span class="bx" style="background:var(--coral-l)">Liberação conforme o contrato</span></div>
+      <p class="muted">A carta de imóvel pode virar obra, se o contrato prever. As regras de liberação (por exemplo, em etapas) estão no contrato.</p>
+    </div>
+    <div class="card">
+      <span class="tag" style="background:var(--navy-l)">Em dinheiro</span>
+      <p class="big">💸 Receber a carta em espécie</p>
+      <p>Só se as três coisas acontecerem juntas:</p>
+      <p>✅ não usou a carta &nbsp; ✅ passaram 180 dias da contemplação &nbsp; ✅ quitou tudo com o grupo</p>
+    </div>
+    <div class="card">
+      <span class="tag" style="background:var(--green-l);color:var(--green)">Sinal já pago</span>
+      <p class="big">↩️ O cliente já pagou um sinal ao vendedor</p>
+      <p class="muted">Se, depois de contemplado, ele pagou algo do próprio bolso (ex.: sinal), pode receber esse valor de volta, descontado da carta.</p>
+    </div>
+  </div>
+  <div class="warn"><b>Ordem que não muda:</b> o pagamento ao vendedor só acontece <b>depois</b> que o consorciado informa formalmente o que vai comprar, entrega os documentos e a <b>garantia está constituída</b>.</div>
+</section>
+
+<!-- 4 VALORES -->
+<section id="valores">
+  <div class="sec-head"><div class="sec-num" style="background:var(--coral)">6</div>
+    <h2>Os 4 valores da operação<small>Bem, disponível, compra e venda, avaliação: e como o preço se fecha</small></h2></div>
+  <div class="grid g4">
+    <div class="card" style="background:#f3f1ec"><span class="tag" style="background:#fff;border:1px solid #c9c1b4">Valor do bem</span><p class="big">📄 O que está no contrato</p><p class="muted">Crédito nominal das cotas (soma de todas as cotas da operação). <b>Não</b> é o dinheiro que o cliente tem na mão.</p></div>
+    <div class="card" style="background:var(--teal-l)"><span class="tag" style="background:#fff;color:var(--teal);border:1px solid var(--teal)">Valor disponível</span><p class="big">💰 O que a carta paga hoje</p><p class="muted">O saldo que o sistema mostra no dia, menos as tarifas (que são descontadas à mão). É ele que paga a compra. <b>Muda todo dia.</b></p></div>
+    <div class="card" style="background:var(--coral-l)"><span class="tag" style="background:#fff;color:var(--coral);border:1px solid var(--coral)">Compra e venda</span><p class="big">🤝 O preço combinado</p><p class="muted">O que comprador e vendedor acertaram. É o valor que a operação precisa fechar.</p></div>
+    <div class="card" style="background:var(--lav-l)"><span class="tag" style="background:#fff;color:var(--lav);border:1px solid var(--lav)">Avaliação</span><p class="big">📐 O que o engenheiro diz</p><p class="muted">Valor de mercado do laudo. Pode ser maior ou menor que o preço.</p></div>
+  </div>
+  <div class="idea"><b>A lógica em uma frase:</b> o preço de compra e venda tem que ser pago inteiro. A carta disponível paga primeiro, o FGTS completa (com teto), e o que faltar sai do bolso do comprador.</div>
+
+  <div class="card" style="margin-top:14px">
+    <p class="big" style="margin-top:0">🎛️ Simulador: como o preço se fecha</p>
+    <div class="grid g3">
+      <div>
+        <p class="tag" style="background:var(--teal-l);color:var(--teal)">Carta</p>
+        <label class="f">Valor do bem (soma das cotas)</label><input type="number" id="vBem" value="400000" step="1000">
+        <label class="f">Valor disponível no dia</label><input type="number" id="vDisp" value="395000" step="0.01">
+        <label class="f">Tarifas a descontar</label><input type="number" id="vTar" value="550" step="0.01">
+      </div>
+      <div>
+        <p class="tag" style="background:var(--coral-l);color:var(--coral)">Imóvel</p>
+        <label class="f">Compra e venda</label><input type="number" id="vCV" value="480000" step="1000">
+        <label class="f">Avaliação</label><input type="number" id="vAv" value="495000" step="1000">
+        <label class="f">Teto do SFH (confira o vigente)</label><input type="number" id="vSFH" value="2250000" step="10000">
+      </div>
+      <div>
+        <p class="tag" style="background:var(--lav-l);color:var(--lav)">FGTS e IQ</p>
+        <label class="f">FGTS</label><input type="number" id="vFGTS" value="45000" step="1000">
+        <label class="f">Tem IQ?</label>
+        <div class="seg" id="vIQt"><button data-v="1" class="on">Sim</button><button data-v="0">Não</button></div>
+        <label class="f">Boleto de quitação do IQ</label><input type="number" id="vIQ" value="210000" step="1000">
+      </div>
+    </div>
+
+    <div class="grid g4" style="margin-top:16px" id="vCards"></div>
+
+    <p style="font-weight:800;margin:18px 0 4px">De onde vem o dinheiro</p>
+    <div class="cmp" id="vFrom" style="height:52px"></div>
+    <p class="muted" style="font-size:14px;margin:6px 0 0" id="vFromTxt"></p>
+
+    <p style="font-weight:800;margin:18px 0 4px">Para onde vai</p>
+    <div id="vToLbl" style="display:flex;font-size:13px;font-weight:700"></div>
+    <div class="cmp" id="vTo" style="height:52px"></div>
+    <p class="muted" style="font-size:14px;margin:6px 0 0">As cores mostram a origem de cada real: a quitação do IQ é paga <b>só com carta</b>. FGTS e recursos próprios só completam o preço ao vendedor.</p>
+
+    <div class="grid g2" style="margin-top:16px">
+      <div class="card" id="rIQ" style="background:var(--gold-l);border-color:var(--gold)"></div>
+      <div class="card" id="rFG" style="background:var(--green-l);border-color:var(--green)"></div>
+    </div>
+    <div class="warn" style="margin-top:14px">🕒 <b>O disponível muda todo dia.</b> A carta rende diariamente, então o número de ontem já não vale.</div>
+  </div>
+</section>
+
+<!-- CARTA X IMÓVEL -->
+<section id="bate">
+  <div class="sec-head"><div class="sec-num" style="background:var(--lav)">7</div>
+    <h2>Quando a carta e o imóvel não batem<small>Arraste o preço do imóvel e veja o que acontece</small></h2></div>
+  <div class="card">
+    <div class="grid g2">
+      <div><label class="f">Valor da carta: <span id="bcV"></span></label><input type="range" id="bc" min="100000" max="400000" step="5000" value="200000"></div>
+      <div><label class="f">Preço do imóvel: <span id="biV"></span></label><input type="range" id="bi" min="80000" max="450000" step="5000" value="170000"></div>
+    </div>
+    <div class="cmp" id="bbar"></div>
+    <div id="bres" class="result"></div>
+  </div>
+</section>
+
+<!-- GARANTIA -->
+<section id="garantia">
+  <div class="sec-head"><div class="sec-num" style="background:var(--coral)">8</div>
+    <h2>Garantia<small>Por que o imóvel fica “preso” à administradora</small></h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <svg viewBox="0 0 460 210" style="width:100%">
+        <rect x="10" y="70" width="120" height="70" rx="14" fill="#d9f2ef"/><text x="70" y="100" text-anchor="middle" font-weight="700" font-size="14" fill="#1d2a44">Consorciado</text><text x="70" y="118" text-anchor="middle" font-size="12" fill="#5d6779">usa a carta</text>
+        <rect x="170" y="70" width="120" height="70" rx="14" fill="#fde4dc"/><text x="230" y="100" text-anchor="middle" font-weight="700" font-size="14" fill="#1d2a44">🏠 Imóvel</text><text x="230" y="118" text-anchor="middle" font-size="12" fill="#5d6779">alienado</text>
+        <rect x="330" y="70" width="120" height="70" rx="14" fill="#e9e6fd"/><text x="390" y="100" text-anchor="middle" font-weight="700" font-size="14" fill="#1d2a44">Administradora</text><text x="390" y="118" text-anchor="middle" font-size="12" fill="#5d6779">(em nome do grupo)</text>
+        <path d="M130 105 H165" stroke="#1d2a44" stroke-width="2.5" marker-end="url(#ah)"/>
+        <path d="M290 105 H325" stroke="#1d2a44" stroke-width="2.5" marker-end="url(#ah)"/>
+        <defs><marker id="ah" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#1d2a44"/></marker></defs>
+        <text x="230" y="40" text-anchor="middle" font-size="13" font-weight="700" fill="#f2694a">fica como garantia até zerar o saldo devedor</text>
+        <text x="230" y="180" text-anchor="middle" font-size="13" fill="#5d6779">saldo zerado → baixa da alienação → imóvel livre</text>
+      </svg>
+      <p>Depois de usar a carta, a pessoa <b>ainda deve ao grupo</b> (o saldo devedor). A garantia protege o grupo caso ela pare de pagar.</p>
+    </div>
+    <div class="card">
+      <p class="big" style="margin-top:0">3 regrinhas</p>
+      <p>1️⃣ <b>Em regra, a garantia é o próprio imóvel comprado</b> com a carta (alienação fiduciária).</p>
+      <p>2️⃣ <b>Se o imóvel valer pouco</b> perto do que a pessoa ainda deve, a administradora pode pedir <b>garantia extra</b>.</p>
+      <p>3️⃣ <b>Pode ser outro imóvel</b> (diferente do comprado), se a administradora aceitar e ele valer o suficiente.</p>
+      <div class="ok"><b>E a cota quitada?</b> Se o saldo devedor já é zero, não existe dívida para garantir. Por isso cota quitada é um caso à parte.</div>
+    </div>
+  </div>
+</section>
+
+<!-- SALDO -->
+<section id="saldo">
+  <div class="sec-head"><div class="sec-num" style="background:var(--teal)">9</div>
+    <h2>Saldo devedor<small>O que ainda falta pagar, e por que ele muda</small></h2></div>
+  <div class="grid g2">
+    <div class="card">
+      <p class="big" style="margin-top:0">O que entra no saldo devedor</p>
+      <div class="flow"><span class="bx" style="background:var(--teal-l)">Parcelas que faltam</span><span class="ar">+</span><span class="bx" style="background:var(--gold-l)">Diferenças de parcela</span><span class="ar">+</span><span class="bx" style="background:var(--coral-l)">Outras obrigações do contrato</span></div>
+      <div class="idea"><b>A pegadinha:</b> consórcio não tem juros, mas o saldo devedor é um <b>% do bem que falta pagar</b>. Se a carta reajusta, o saldo em reais <b>sobe</b>, mesmo com tudo em dia.</div>
+      <div class="warn"><b>Contemplada ≠ quitada.</b> Contemplada = ganhou o direito de usar a carta. Quitada = pagou tudo (saldo zero).</div>
+    </div>
+    <div class="card">
+      <p class="big" style="margin-top:0">🎛️ Veja o saldo mudar</p>
+      <label class="f">% já pago do bem: <span id="spV"></span></label><input type="range" id="sp" min="0" max="100" step="2" value="40">
+      <label class="f">Valor atual da carta: <span id="scV"></span></label><input type="range" id="sc" min="100000" max="400000" step="5000" value="200000">
+      <div class="cells" id="scells"></div>
+      <div class="result" id="sres"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FGTS -->
+<section id="fgts">
+  <div class="sec-head"><div class="sec-num" style="background:var(--lav)">10</div>
+    <h2>FGTS no consórcio<small>Só consórcio de imóvel, para moradia própria. 4 jeitos de usar.</small></h2></div>
+  <div class="grid g4">
+    <div class="card"><div class="emoji">🎯</div><p class="big">Lance</p><p class="muted">Até 100% do saldo do FGTS. Funciona como embutido: a administradora libera carta − lance, e o FGTS vai direto ao vendedor.</p><p style="font-size:14px"><b>Ex.:</b> carta 250 mil, lance FGTS 50 mil → 200 mil da carta + 50 mil do FGTS = 250 mil para comprar.</p></div>
+    <div class="card"><div class="emoji">➕</div><p class="big">Complementar a carta</p><p class="muted">Quando o imóvel custa mais que a carta. O FGTS cobre a diferença e vai direto ao vendedor, sem passar pela administradora.</p><p style="font-size:14px"><b>Ex.:</b> carta 110 mil, imóvel 140 mil → 30 mil do FGTS.</p></div>
+    <div class="card"><div class="emoji">📉</div><p class="big">Amortizar ou liquidar o saldo</p><p class="muted">Só <b>depois</b> de contemplado <b>e</b> de ter comprado o imóvel.</p><p style="font-size:14px">• Amortizar: parcelas em dia, a cada 2 anos<br>• Liquidar tudo: aceita parcela atrasada<br>• Vale para várias cotas, se todas foram usadas no mesmo imóvel</p></div>
+    <div class="card"><div class="emoji">🧾</div><p class="big">Pagar parte das parcelas</p><p class="muted">Só depois de usar o crédito.</p><p style="font-size:14px">• Até <b>80%</b> de cada parcela<br>• No máximo <b>12 parcelas</b> (até 6 atrasadas + as que vão vencer)<br><b>Ex.:</b> parcela 1.200 → FGTS 960, cliente paga 240.</p></div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <p class="big" style="margin-top:0">🎛️ Simulador: teto do FGTS na complementação da carta</p>
+    <div class="result" style="background:var(--lav-l);font-weight:700;font-size:16px">FGTS + carta ≤ menor valor entre compra e venda e avaliação</div>
+    <p class="muted" style="font-size:14px;margin:6px 0 0">É a mesma regra da aquisição com financiamento: a carta só entra no lugar do financiamento.</p>
+    <div class="grid g4" style="margin-top:6px">
+      <div><label class="f">Compra e venda</label><input type="number" id="tCV" value="890590" step="0.01"></div>
+      <div><label class="f">Avaliação</label><input type="number" id="tAV" value="887000" step="0.01"></div>
+      <div><label class="f">Valor disponível da carta no dia</label><input type="number" id="tDisp" value="437121.01" step="0.01"></div>
+      <div><label class="f">Tarifas a descontar</label><input type="number" id="tTar" value="550" step="0.01"></div>
+      <div><label class="f">Saldo atual nas contas FGTS</label><input type="number" id="tSaldo" value="468075.77" step="0.01"></div>
+    </div>
+    <p class="muted" style="font-size:14px;margin:8px 0 0">A carta que entra na conta é o <b>valor disponível menos as tarifas</b>: é o que a carta efetivamente paga ao vendedor (e ao banco do IQ, se houver). É ela que ocupa o lugar do “financiamento” na regra.</p>
+
+    <div id="tSteps" style="display:grid;gap:12px;margin-top:16px"></div>
+
+    <p style="font-weight:800;margin:18px 0 6px">Resumo da operação</p>
+    <div class="grid g3" id="tCards"></div>
+    <div id="tMsg"></div>
+
+    <div class="grid g2" style="margin-top:14px">
+      <div class="card" style="background:var(--navy-l)">
+        <p class="big" style="margin:0 0 6px">📚 Fundamento (MMP)</p>
+        <p style="font-size:14px;margin:0">• <b>4.1.4:</b> FGTS + financiamento ≤ menor valor entre compra e venda e avaliação. É a regra da aquisição de imóvel concluído, sem exceção para consórcio.<br>
+        • <b>3.3.2:</b> no consórcio, o FGTS complementa a carta para compra de imóvel residencial concluído. É a mesma modalidade (aquisição) e segue o capítulo 4.<br>
+        • <b>3.3.2.2:</b> só vale para cota já contemplada e descrita no contrato registrado.</p>
+      </div>
+      <div class="card" style="background:var(--green-l)">
+        <p class="big" style="margin:0 0 6px">✅ O que conferir</p>
+        <p style="font-size:14px;margin:0">☐ Valor da carta <b>efetivamente liberado ao vendedor</b> (é ele que entra no lugar do “financiamento”)<br>
+        ☐ Laudo de avaliação usado na operação<br>
+        ☐ Cota contemplada constando no contrato levado a registro<br>
+        ☐ Demais requisitos do trabalhador (item 4.3)</p>
+      </div>
+    </div>
+  </div>
+  <div class="ok"><b>Regra de ouro:</b> quando o FGTS entra na compra (lance ou complemento), ele <b>vai para o vendedor</b>, nunca para a conta do consorciado.</div>
+</section>
+
+</main>
+<footer>Feito a partir do material do curso ABAC, da Lei 11.795/2008 e da Resolução BCB 285/2023 · resumo para apoio, o contrato do grupo sempre manda nos detalhes.</footer>
+
+<script>
+const R = v => v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',maximumFractionDigits:0});
+
+/* ---------- MAPA MENTAL ---------- */
+(function(){
+  const svg=document.getElementById('mindmap'), NS='http://www.w3.org/2000/svg';
+  const cx=500, cy=300;
+  const nodes=[
+    {t:'Jornada da cota',s:'do início ao fim',id:'jornada',c:'#0f9b8e',l:'#d9f2ef'},
+    {t:'Carta de crédito',s:'o “vale-imóvel”',id:'carta',c:'#7a6cf0',l:'#e9e6fd'},
+    {t:'Parcela',s:'FC + TA + FR + S',id:'parcela',c:'#f2694a',l:'#fde4dc'},
+    {t:'Lances',s:'próprio · embutido · FGTS',id:'lances',c:'#d99a22',l:'#fbeed3'},
+    {t:'Uso do crédito',s:'compra · IQ · quitação',id:'uso',c:'#0f9b8e',l:'#d9f2ef'},
+    {t:'Os 4 valores',s:'como o preço se fecha',id:'valores',c:'#f2694a',l:'#fde4dc'},
+    {t:'Carta × imóvel',s:'sobra ou falta',id:'bate',c:'#7a6cf0',l:'#e9e6fd'},
+    {t:'Garantia',s:'alienação fiduciária',id:'garantia',c:'#f2694a',l:'#fde4dc'},
+    {t:'Saldo devedor',s:'o que falta pagar',id:'saldo',c:'#0f9b8e',l:'#d9f2ef'},
+    {t:'FGTS',s:'4 jeitos de usar',id:'fgts',c:'#7a6cf0',l:'#e9e6fd'}
+  ];
+  const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e};
+  nodes.forEach((n,i)=>{
+    const ang=-Math.PI/2 + i*2*Math.PI/nodes.length;
+    n.x=cx+Math.cos(ang)*375; n.y=cy+Math.sin(ang)*225;
+    const mx=cx+Math.cos(ang)*190, my=cy+Math.sin(ang)*40;
+    svg.appendChild(el('path',{d:`M${cx},${cy} Q${mx},${my} ${n.x},${n.y}`,stroke:n.c,'stroke-width':4,fill:'none',opacity:.45,'stroke-linecap':'round'}));
+  });
+  const c=el('g',{});
+  c.appendChild(el('ellipse',{cx,cy,rx:110,ry:62,fill:'#1d2a44'}));
+  const t1=el('text',{x:cx,y:cy-4,'text-anchor':'middle','font-size':26,'font-weight':800,fill:'#fff'});t1.textContent='COTA';
+  const t2=el('text',{x:cx,y:cy+22,'text-anchor':'middle','font-size':14,fill:'#cfd6e4'});t2.textContent='de consórcio';
+  c.append(t1,t2); svg.appendChild(c);
+  nodes.forEach(n=>{
+    const g=el('g',{class:'node',tabindex:0,role:'link'});
+    const w=196,h=64;
+    g.appendChild(el('rect',{x:n.x-w/2,y:n.y-h/2,width:w,height:h,rx:18,fill:n.l,stroke:n.c,'stroke-width':2.5}));
+    const a=el('text',{x:n.x,y:n.y-3,'text-anchor':'middle','font-size':18,'font-weight':800,fill:'#1d2a44'});a.textContent=n.t;
+    const b=el('text',{x:n.x,y:n.y+18,'text-anchor':'middle','font-size':13,fill:'#5d6779'});b.textContent=n.s;
+    g.append(a,b);
+    const go=()=>document.getElementById(n.id).scrollIntoView({behavior:'smooth'});
+    g.addEventListener('click',go); g.addEventListener('keydown',e=>{if(e.key==='Enter')go()});
+    svg.appendChild(g);
+  });
+})();
+
+/* ---------- JORNADA ---------- */
+(function(){
+  const steps=[
+    ['📝','Adesão','entra no grupo','A pessoa compra uma <b>cota</b> de um grupo e escolhe o valor da carta. A partir daí, ela é um <b>consorciado</b>.'],
+    ['📆','Paga parcelas','todo mês','Paga a parcela (FC + TA + FR + S). O Fundo Comum vai juntando dinheiro para contemplar alguém todo mês.'],
+    ['🎉','Contemplação','sorteio ou lance','Na assembleia, alguém é sorteado ou ganha pelo lance. Ser contemplado = <b>ganhar o direito</b> de usar a carta. Não quer dizer que a cota está paga.'],
+    ['💰','Carta disponível','e rendendo','A carta fica à disposição em até 3 dias úteis depois da homologação da contemplação, aplicada e <b>rendendo</b> até ser usada.'],
+    ['🧭','Escolhe o destino','o que vai comprar','O consorciado informa à administradora o que vai fazer: comprar imóvel, comprar com IQ, quitar financiamento, construir…'],
+    ['🔍','Análise + garantia','documentos e registro','Conferência dos documentos, avaliação e constituição da garantia (o imóvel fica alienado ao grupo).'],
+    ['🏦','Pagamento','direto ao vendedor','A administradora paga <b>direto</b> ao vendedor (ou ao banco interveniente quitante). O dinheiro não passa pelo consorciado.'],
+    ['📉','Segue pagando','até zerar o saldo','A pessoa continua pagando as parcelas até o saldo devedor zerar. O FGTS pode ajudar a amortizar. Saldo zerado = garantia baixada.']
+  ];
+  const box=document.getElementById('journey'), info=document.getElementById('stepInfo');
+  steps.forEach((s,i)=>{
+    const d=document.createElement('div');d.className='step';
+    d.innerHTML=`<div class="dot">${s[0]}</div><b>${i+1}. ${s[1]}</b><span>${s[2]}</span>`;
+    d.onclick=()=>show(i); box.appendChild(d);
+  });
+  function show(i){
+    [...box.children].forEach((c,j)=>c.classList.toggle('active',j===i));
+    info.innerHTML=`<b style="font-size:18px">${steps[i][0]} ${steps[i][1]}</b><br>${steps[i][3]}`;
+  }
+  show(0);
+})();
+
+/* ---------- LANCE ---------- */
+(function(){
+  let type='proprio';
+  const c=document.getElementById('lc'), l=document.getElementById('ll'), bars=document.getElementById('lbars'), res=document.getElementById('lres');
+  document.querySelectorAll('#ltype button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#ltype button').forEach(x=>x.classList.remove('on'));b.classList.add('on');type=b.dataset.t;draw();
+  });
+  function bar(label,val,max,color){
+    const w=max>0?Math.max(0,Math.min(100,val/max*100)):0;
+    return `<div class="bar"><div><b>${label}</b></div><div class="track"><div class="fill" style="width:${w}%;background:${color}">${val>0?R(val):''}</div></div></div>`;
+  }
+  function draw(){
+    const C=Math.max(0,+c.value||0), L=Math.min(Math.max(0,+l.value||0),C);
+    let bolso=0, liberado=C, fgts=0;
+    if(type==='proprio'){bolso=L;liberado=C}
+    if(type==='embutido'){liberado=C-L}
+    if(type==='fgts'){liberado=C-L;fgts=L}
+    const total=liberado+fgts, max=C;
+    bars.innerHTML=
+      bar('Sai do bolso',bolso,max,'#f2694a')+
+      bar('Administradora libera',liberado,max,'#0f9b8e')+
+      bar('FGTS → vendedor',fgts,max,'#7a6cf0')+
+      bar('Total para comprar',total,max,'#1d2a44');
+    const txt={
+      proprio:`Pagou ${R(L)} do bolso e recebe a carta <b>inteira</b> (${R(C)}). Esses ${R(L)} abatem o saldo devedor.`,
+      embutido:`Não tirou nada do bolso, mas a carta cai para <b>${R(C-L)}</b>. Os ${R(L)} do lance também abatem o saldo devedor. Se o imóvel custar mais que isso, falta dinheiro.`,
+      fgts:`A administradora libera ${R(C-L)} e o FGTS paga ${R(L)} <b>direto ao vendedor</b>. Total para a compra: <b>${R(C)}</b>.`
+    }[type];
+    const pct=C?(L/C*100).toFixed(1).replace('.',','):0;
+    res.innerHTML=txt+`<br><span class="muted">Esse lance equivale a ${pct}% da carta. No exemplo do curso, um lance de 10 parcelas encurta o plano em 10 meses (50 → 40).</span>`;
+  }
+  c.oninput=l.oninput=draw; draw();
+})();
+
+/* ---------- 4 VALORES ---------- */
+(function(){
+  const R2=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});
+  const N=v=>v.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const g=id=>Math.max(0,parseFloat(document.getElementById(id).value)||0);
+  let temIQ=true;
+  document.querySelectorAll('#vIQt button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('#vIQt button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+    temIQ=b.dataset.v==='1';document.getElementById('vIQ').disabled=!temIQ;draw();
+  });
+  const seg=(w,bg,top,bot,color='#fff')=>w<=0?'':`<div style="width:${w}%;background:${bg};color:${color};flex-direction:column;line-height:1.2;text-align:center">${top}<span style="font-weight:600;font-size:12px">${bot}</span></div>`;
+  const check=(ok,txt)=>`<p style="margin:8px 0;font-weight:700;color:${ok?'#2f9e5b':'#d64545'}">${ok?'✓':'✗'} ${txt}</p>`;
+  function draw(){
+    const bem=g('vBem'),dispDia=g('vDisp'),tar=g('vTar');
+    const CV=g('vCV'),AV=g('vAv'),SFH=g('vSFH'),F=g('vFGTS'),IQ=temIQ?g('vIQ'):0;
+    const disp=Math.max(0,dispDia-tar);
+    const menor=Math.min(CV,AV);
+    const cartaUsa=Math.max(0,Math.min(disp,CV));
+    const sobraCarta=Math.max(0,disp-CV);
+    const fg=Math.min(F,Math.max(0,CV-cartaUsa));
+    const prop=Math.max(0,CV-cartaUsa-fg);
+
+    document.getElementById('vCards').innerHTML=`
+      <div class="card" style="padding:14px;background:#f3f1ec"><span class="muted" style="font-size:13px">Valor do bem</span><div class="big">${R2(bem)}</div></div>
+      <div class="card" style="padding:14px;background:var(--teal-l)"><span class="muted" style="font-size:13px">Valor disponível</span><div class="big" style="color:var(--teal)">${R2(disp)}</div>
+        <div style="font-size:12px" class="muted">${N(dispDia)} disponível no dia<br>− ${N(tar)} tarifas</div></div>
+      <div class="card" style="padding:14px;background:var(--coral-l)"><span class="muted" style="font-size:13px">Compra e venda</span><div class="big" style="color:#b0432a">${R2(CV)}</div></div>
+      <div class="card" style="padding:14px;background:var(--lav-l)"><span class="muted" style="font-size:13px">Avaliação</span><div class="big" style="color:var(--lav)">${R2(AV)}</div></div>`;
+
+    const p=v=>CV>0?v/CV*100:0;
+    document.getElementById('vFrom').innerHTML=
+      seg(p(cartaUsa),'#0f9b8e','Carta disponível',R2(cartaUsa))+
+      seg(p(fg),'#8bc34a','FGTS',N(fg),'#1d2a44')+
+      seg(p(prop),'#b9b3aa','Próprios',N(prop),'#1d2a44');
+    document.getElementById('vFromTxt').innerHTML = sobraCarta>0
+      ? `A carta disponível é maior que o preço: <b>sobram ${R2(sobraCarta)}</b> (veja “Carta × imóvel”). FGTS e recursos próprios não entram.`
+      : `Recursos próprios = ${N(CV)} − ${N(cartaUsa)} − ${N(fg)} = <b>${R2(prop)}</b>`;
+
+    // para onde vai
+    const iqCarta=Math.min(IQ,cartaUsa), iqFalta=Math.max(0,IQ-cartaUsa);
+    const vendCarta=Math.max(0,cartaUsa-IQ);
+    const vend=Math.max(0,CV-IQ);
+    document.getElementById('vToLbl').innerHTML = (temIQ?`<div style="width:${p(IQ)}%;border-bottom:3px solid var(--gold);color:#8a5d00;padding-bottom:3px">Banco do vendedor (quita o IQ) · ${R2(IQ)}</div>`:'')+
+      `<div style="width:${p(vend)}%;border-bottom:3px solid #1d2a44;padding-bottom:3px;padding-left:6px">Vendedor · ${R2(vend)}</div>`;
+    document.getElementById('vTo').innerHTML=
+      seg(p(iqCarta),'#0f9b8e','Carta',N(iqCarta))+
+      seg(p(iqFalta),'#d64545','Falta carta',N(iqFalta))+
+      seg(p(vendCarta),'#13b3a3','Sobra da carta',N(vendCarta))+
+      seg(p(fg),'#8bc34a','FGTS',N(fg),'#1d2a44')+
+      seg(p(prop),'#b9b3aa','Próprios',N(prop),'#1d2a44');
+
+    // regra IQ
+    const okIQ=disp>=IQ;
+    document.getElementById('rIQ').innerHTML = temIQ ? `
+      <p class="big" style="margin:0">🔗 Regra do IQ</p>
+      <div class="result" style="background:#fff;font-weight:700">Carta disponível ≥ boleto do IQ</div>
+      ${check(okIQ, okIQ?`${N(disp)} ≥ ${N(IQ)}: cobre, sobram ${N(disp-IQ)}`:`${N(disp)} < ${N(IQ)}: faltam ${N(IQ-disp)} de carta`)}
+      <p style="font-size:14px;margin:0">• Só a carta paga o IQ: FGTS e recursos próprios não entram nessa conta<br>• Só as cotas envolvidas no processo<br>• Valor da carta na data do boleto</p>`
+      : `<p class="big" style="margin:0">🔗 Regra do IQ</p><p class="muted">Operação sem IQ: o vendedor não tem financiamento a quitar, então a carta vai inteira para o preço.</p>`;
+    document.getElementById('rIQ').style.background = (!temIQ||okIQ)?'var(--gold-l)':'var(--red-l)';
+
+    // regra FGTS
+    const limFG=Math.max(0,menor-cartaUsa);
+    const okSoma=cartaUsa+F<=menor, okSFH=AV<=SFH;
+    const usaF=F>0;
+    document.getElementById('rFG').innerHTML = `
+      <p class="big" style="margin:0">🏠 Regra do FGTS</p>
+      <div class="result" style="background:#fff;font-weight:700">Carta + FGTS ≤ menor valor entre compra e venda e avaliação</div>
+      ${usaF?check(okSoma, `${N(cartaUsa)} + ${N(F)} = ${N(cartaUsa+F)} ${okSoma?'≤':'>'} ${N(menor)}`):'<p class="muted">Sem FGTS nesta operação.</p>'}
+      ${usaF&&!okSoma?`<p style="font-size:14px;margin:0 0 8px;color:#d64545"><b>FGTS máximo aqui: ${R2(limFG)}</b>. O resto teria que sair de recursos próprios.</p>`:''}
+      ${usaF?check(okSFH, `Avaliação ${okSFH?'dentro':'acima'} do teto do SFH (${R2(SFH)})`):''}
+      <p style="font-size:14px;margin:0">• Aqui o menor é ${CV<=AV?`a compra e venda (${N(CV)} ≤ ${N(AV)})`:`a avaliação (${N(AV)} < ${N(CV)})`}<br>• Se a compra e venda passar da avaliação, a diferença sai de recursos próprios<br>• O FGTS vai direto ao vendedor</p>`;
+    document.getElementById('rFG').style.background = (!usaF||(okSoma&&okSFH))?'var(--green-l)':'var(--red-l)';
+  }
+  document.querySelectorAll('#valores input').forEach(i=>i.oninput=draw);
+  draw();
+})();
+
+/* ---------- TETO FGTS ---------- */
+(function(){
+  const R2=v=>v.toLocaleString('pt-BR',{style:'currency',currency:'BRL',minimumFractionDigits:2,maximumFractionDigits:2});
+  const g=id=>Math.max(0,parseFloat(document.getElementById(id).value)||0);
+  const box=(lbl,val,color,bg,sub='')=>`<div class="card" style="padding:12px 14px;background:${bg}"><span class="muted" style="font-size:12px;font-weight:700;text-transform:uppercase">${lbl}</span><div class="big" style="color:${color}">${R2(val)}</div>${sub?`<div class="muted" style="font-size:12px">${sub}</div>`:''}</div>`;
+  // barra com largura mínima para pedaços pequenos não sumirem
+  function bar(parts){
+    const tot=parts.reduce((a,x)=>a+x.v,0)||1, MIN=26;
+    let w=parts.map(x=>x.v>0?Math.max(MIN,x.v/tot*100):0);
+    const sw=w.reduce((a,b)=>a+b,0); w=w.map(x=>x/sw*100);
+    return `<div class="cmp" style="height:56px">`+parts.map((x,i)=>w[i]<=0?'':
+      `<div style="width:${w[i]}%;background:${x.c};color:${x.t||'#fff'};flex-direction:column;line-height:1.2;text-align:center;padding:0 4px;white-space:normal">${x.l}<span style="font-weight:600;font-size:12px">${R2(x.v)}</span></div>`).join('')+`</div>`;
+  }
+  const step=(n,title,body,visual,color)=>`<div style="border:1px solid var(--line);border-left:5px solid ${color};border-radius:14px;padding:14px 16px;background:#fff">
+      <div style="display:flex;gap:10px;align-items:center"><span style="background:${color};color:#fff;font-weight:800;border-radius:8px;width:28px;height:28px;display:grid;place-items:center;flex:none">${n}</span><b style="font-size:17px">${title}</b></div>
+      <div style="font-size:15px;margin:8px 0 6px">${body}</div>${visual||''}</div>`;
+  const calc=t=>`<div style="font-family:ui-monospace,Menlo,monospace;font-size:14px;background:#f6f3ee;border-radius:10px;padding:8px 12px;margin-top:6px">${t}</div>`;
+  function draw(){
+    const CV=g('tCV'),AV=g('tAV'),D=g('tDisp'),T=g('tTar'),S=g('tSaldo');
+    const C=Math.max(0,D-T);
+    const menor=Math.min(CV,AV), quem=CV<=AV?'compra e venda':'avaliação';
+    const espaco=Math.max(0,menor-C);
+    const fg=Math.min(S,espaco), fica=Math.max(0,S-espaco);
+    const cartaUsa=Math.min(C,CV);
+    const prop=Math.max(0,CV-cartaUsa-fg);
+    let h='';
+    h+=step(1,'Qual é o teto?',
+      `O teto é o <b>menor</b> valor entre compra e venda e avaliação. Aqui o menor é a <b>${quem}</b>.`,
+      calc(`compra e venda ${R2(CV)} &nbsp;×&nbsp; avaliação ${R2(AV)} &nbsp;→&nbsp; teto = <b>${R2(menor)}</b>`)+
+      `<div style="display:grid;gap:6px;margin-top:8px">
+        <div class="bar"><div><b>Compra e venda</b></div><div class="track"><div class="fill" style="width:${CV/Math.max(CV,AV)*100}%;background:${CV<=AV?'var(--lav)':'#c9c1b4'}">${R2(CV)}</div></div></div>
+        <div class="bar"><div><b>Avaliação</b></div><div class="track"><div class="fill" style="width:${AV/Math.max(CV,AV)*100}%;background:${AV<CV?'var(--lav)':'#c9c1b4'}">${R2(AV)}</div></div></div>
+      </div>`,'var(--lav)');
+    h+=step(2,'Quanto a carta ocupa desse teto?',
+      `A carta entra no lugar do financiamento. O valor que conta é o <b>disponível no dia menos as tarifas</b>.`,
+      calc(`${R2(D)} disponível − ${R2(T)} tarifas = <b>${R2(C)}</b> de carta`),'var(--teal)');
+    h+=step(3,'Quanto espaço sobra para o FGTS?',
+      C>=menor?`A carta sozinha já ocupa o teto inteiro: <b>não sobra espaço para FGTS</b>.`:`É o teto menos a carta. Esse é o <b>máximo de FGTS</b> que cabe na operação.`,
+      calc(`${R2(menor)} teto − ${R2(C)} carta = <b>${R2(espaco)}</b> de espaço para FGTS`)+
+      bar([{l:'Carta',v:Math.min(C,menor),c:'#0f9b8e'},{l:'Espaço para o FGTS',v:espaco,c:'#8bc34a',t:'#1d2a44'}])+
+      `<div class="muted" style="font-size:13px;margin-top:4px">A barra inteira é o teto (${R2(menor)}).</div>`,'#8bc34a');
+    h+=step(4,'Quanto FGTS entra de fato?',
+      `Entra o <b>menor</b> entre o saldo que o cliente tem e o espaço do passo 3. ${fica>0?'O cliente tem mais FGTS do que cabe, então uma parte fica na conta.':'Todo o saldo do cliente cabe no espaço.'}`,
+      calc(`saldo ${R2(S)} &nbsp;×&nbsp; espaço ${R2(espaco)} &nbsp;→&nbsp; entra <b>${R2(fg)}</b>`+(fica>0?`<br>${R2(S)} − ${R2(fg)} = <b>${R2(fica)}</b> ficam na conta vinculada`:''))+
+      bar([{l:'Entra na compra',v:fg,c:'#8bc34a',t:'#1d2a44'},{l:'Fica na conta FGTS',v:fica,c:'#f2694a'}])+
+      `<div class="muted" style="font-size:13px;margin-top:4px">A barra inteira é o saldo do FGTS do cliente (${R2(S)}).</div>`,'#f2694a');
+    h+=step(5,'Quanto sai do bolso do comprador?',
+      `O vendedor precisa receber o preço inteiro de compra e venda. O que carta e FGTS não cobrem é <b>recurso próprio</b>.`,
+      calc(`${R2(CV)} preço − ${R2(cartaUsa)} carta − ${R2(fg)} FGTS = <b>${R2(prop)}</b> de recursos próprios`)+
+      bar([{l:'Carta',v:cartaUsa,c:'#0f9b8e'},{l:'FGTS',v:fg,c:'#8bc34a',t:'#1d2a44'},{l:'Próprios',v:prop,c:'#6b6459'}])+
+      `<div class="muted" style="font-size:13px;margin-top:4px">A barra inteira é o preço de compra e venda (${R2(CV)}).</div>`+
+      (prop>0&&CV>AV?`<div class="idea" style="margin-top:8px">Aqui os recursos próprios ${Math.abs(prop-(CV-AV))<0.005?'são exatamente':'incluem'} a <b>diferença entre compra e venda e avaliação</b> (${R2(CV)} − ${R2(AV)} = ${R2(CV-AV)}). Como o teto é a avaliação, essa parte do preço nunca pode ser paga com carta + FGTS.</div>`:''),'#6b6459');
+    document.getElementById('tSteps').innerHTML=h;
+    document.getElementById('tCards').innerHTML=
+      box('FGTS no saque',fg,'var(--green)','var(--green-l)',fica>0?`${R2(fica)} ficam na conta`:'todo o saldo cabe')+
+      box('Carta',C,'var(--teal)','var(--teal-l)','disponível − tarifas')+
+      box('Recursos próprios',prop,'var(--ink)','#f3f1ec','do bolso do comprador');
+    let msg='';
+    if(C>=menor) msg+=`<div class="warn">A carta já ocupa o teto inteiro: <b>não cabe FGTS</b> nesta operação.</div>`;
+    else if(fica>0) msg+=`<div class="warn">⛔ <b>${R2(fica)} de FGTS ficam fora desta operação</b> (teto do 4.1.4) e permanecem na conta vinculada, rendendo normalmente. Recursos próprios: <b>${R2(prop)}</b>.</div>`;
+    else msg+=`<div class="ok">✓ Todo o saldo do FGTS (${R2(S)}) cabe no teto.</div>`;
+    document.getElementById('tMsg').innerHTML=msg;
+  }
+  ['tCV','tAV','tDisp','tTar','tSaldo'].forEach(id=>document.getElementById(id).oninput=draw);
+  draw();
+})();
+
+/* ---------- CARTA x IMÓVEL ---------- */
+(function(){
+  const c=document.getElementById('bc'), i=document.getElementById('bi'), bar=document.getElementById('bbar'), res=document.getElementById('bres');
+  function draw(){
+    const C=+c.value, I=+i.value;
+    document.getElementById('bcV').textContent=R(C); document.getElementById('biV').textContent=R(I);
+    if(I<=C){
+      const sobra=C-I, lim=C*0.10, desp=Math.min(sobra,lim), resto=sobra-desp;
+      const t=C;
+      bar.innerHTML=`<div style="width:${I/t*100}%;background:#0f9b8e">imóvel ${R(I)}</div>`+
+        (desp>0?`<div style="width:${desp/t*100}%;background:#d99a22">despesas</div>`:'')+
+        (resto>0?`<div style="width:${resto/t*100}%;background:#7a6cf0">resto</div>`:'');
+      res.innerHTML = sobra===0 ? `✅ Bateu certinho: a carta paga o imóvel inteiro.` :
+        `🟢 <b>Sobrou ${R(sobra)}</b>. Como usar:<br>
+        <span style="color:#8a5d00">■</span> <b>Despesas do imóvel</b> (ITBI, registro, tarifas, seguros): até 10% da carta = <b>${R(lim)}</b> → aqui cabe ${R(desp)}.<br>
+        <span style="color:#7a6cf0">■</span> <b>O resto (${R(resto)})</b>: pode quitar parcelas que vão vencer, ou voltar em dinheiro para o consorciado, mas só se ele quitar tudo com o grupo.`;
+    } else {
+      const falta=I-C, t=I;
+      bar.innerHTML=`<div style="width:${C/t*100}%;background:#0f9b8e">carta ${R(C)}</div><div style="width:${falta/t*100}%;background:#f2694a">falta</div>`;
+      res.innerHTML=`🟠 <b>Faltam ${R(falta)}</b>. O consorciado completa com <b>recursos próprios</b> ou com <b>FGTS</b> (se for moradia própria). O complemento vai direto ao vendedor.`;
+    }
+  }
+  c.oninput=i.oninput=draw; draw();
+})();
+
+/* ---------- SALDO ---------- */
+(function(){
+  const p=document.getElementById('sp'), c=document.getElementById('sc'), cells=document.getElementById('scells'), res=document.getElementById('sres');
+  for(let k=0;k<50;k++){cells.appendChild(document.createElement('i'))}
+  function draw(){
+    const P=+p.value, C=+c.value;
+    document.getElementById('spV').textContent=P+'%'; document.getElementById('scV').textContent=R(C);
+    [...cells.children].forEach((x,k)=>{x.className=(k<P/2)?'p':'l'});
+    const saldo=C*(100-P)/100, mais=C*1.05*(100-P)/100;
+    res.innerHTML=`<span style="color:#0f9b8e">■</span> pago ${P}% &nbsp; <span style="color:#7a6cf0">■</span> falta ${100-P}%<br>
+      Saldo devedor (parte do bem): <b>${R(saldo)}</b><br>
+      <span class="muted">Se a carta reajustar 5%, o mesmo ${100-P}% vira <b>${R(mais)}</b>. Isso sem atraso nenhum: o % continua igual, o valor em reais é que muda.</span>`;
+  }
+  p.oninput=c.oninput=draw; draw();
+})();
+
+</script>
+</body>
+</html>
