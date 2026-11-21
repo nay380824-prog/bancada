@@ -71,6 +71,13 @@ main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px}
 .pd-out .hf{color:#4F555E}
 /* modal */
 .ov{position:fixed;inset:0;background:rgba(20,22,26,.4);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-size-adjust:none;-webkit-text-size-adjust:none;transform-origin:0 0;z-index:1}
+.textLayer span,.textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0% 0%}
+.textLayer .markedContent{display:contents}
+.textLayer ::selection{background:rgba(15,110,98,.30)}
+.textLayer br::selection{background:transparent}
+.textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:0;cursor:default;user-select:none}
+.textLayer.sel .endOfContent{top:0}
 .modal{background:#fff;border-radius:24px;padding:24px;width:100%;max-width:640px;max-height:90vh;overflow:auto;display:flex;flex-direction:column;gap:12px}
 /* steps */
 .step{display:flex;gap:12px;align-items:flex-start;background:var(--soft);border-radius:16px;padding:12px 14px}
@@ -427,7 +434,7 @@ async function vRot(){
        '<div style="display:flex;gap:6px;align-items:center"><button class="btn2 btn-sm" onclick="rotIr(RT.pag-1)" aria-label="Página anterior">‹</button>'+
        '<span style="font-size:14px;font-weight:700">página <input type="number" min="1" max="'+v.paginas_total+'" value="'+RT.pag+'" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;text-align:center" onchange="rotIr(+this.value)"> de '+v.paginas_total+'</span>'+
        '<button class="btn2 btn-sm" onclick="rotIr(RT.pag+1)" aria-label="Próxima página">›</button></div>'+
-       '<div style="display:flex;gap:6px"><button class="btn2 btn-sm" onclick="RT.zoom=Math.max(.6,RT.zoom-.2);rotDesenhar()" aria-label="Diminuir">−</button><button class="btn2 btn-sm" onclick="RT.zoom=Math.min(2.4,RT.zoom+.2);rotDesenhar()" aria-label="Aumentar">+</button></div></div>'+
+       '<div style="display:flex;gap:6px"><button class="btn2 btn-sm" onclick="rotCopiarPag(this)">Copiar página</button><button class="btn2 btn-sm" onclick="RT.zoom=Math.max(.6,RT.zoom-.2);rotDesenhar()" aria-label="Diminuir">−</button><button class="btn2 btn-sm" onclick="RT.zoom=Math.min(2.4,RT.zoom+.2);rotDesenhar()" aria-label="Aumentar">+</button></div></div>'+
      '<div id="rot-sec" style="font-size:13px;color:var(--muted);font-weight:700"></div>'+
      '<div id="rot-pag" style="background:#EDEBE6;border-radius:14px;padding:12px;overflow:auto;min-height:500px;display:flex;justify-content:center"><div class="note">Abrindo o PDF...</div></div></section>'+
    '</div>';
@@ -467,11 +474,16 @@ async function rotDesenhar(){
     var cv=document.createElement('canvas');cv.width=vp.width*dpr;cv.height=vp.height*dpr;cv.style.width=vp.width+'px';cv.style.height=vp.height+'px';wrap.appendChild(cv);
     await pg.render({canvasContext:cv.getContext('2d'),viewport:pg.getViewport({scale:esc1*dpr})}).promise;
     if(meu!==_rotRender)return;
+    try{var lib=await pdfLib(),tl=document.createElement('div');tl.className='textLayer';tl.style.setProperty('--scale-factor',esc1);wrap.appendChild(tl);
+      await new lib.TextLayer({textContentSource:pg.streamTextContent(),container:tl,viewport:vp}).render();
+      tl.addEventListener('mousedown',function(){tl.classList.add('sel');});document.addEventListener('mouseup',function(){tl.classList.remove('sel');},{once:true});
+    }catch(e){}
+    if(meu!==_rotRender)return;
     var an=await pg.getAnnotations();
     an.forEach(function(a){
       if(a.subtype!=='Link')return;
       var r=vp.convertToViewportRectangle(a.rect),x=Math.min(r[0],r[2]),y=Math.min(r[1],r[3]),w=Math.abs(r[0]-r[2]),h=Math.abs(r[1]-r[3]);
-      var el=document.createElement('a');el.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;border-radius:3px';
+      var el=document.createElement('a');el.style.cssText='position:absolute;z-index:2;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;border-radius:3px';
       el.onmouseenter=function(){el.style.background='rgba(15,110,98,.15)';};el.onmouseleave=function(){el.style.background='';};
       if(a.url){el.href=a.url;el.target='_blank';el.rel='noopener';el.title=a.url;}
       else if(a.dest){el.href='#';el.onclick=async function(ev){ev.preventDefault();try{var d=typeof a.dest==='string'?await doc.getDestination(a.dest):a.dest;var idx=typeof d[0]==='object'?await doc.getPageIndex(d[0]):d[0];rotIr(idx+1);}catch(e){}};}
@@ -480,6 +492,11 @@ async function rotDesenhar(){
     });
     box.innerHTML='';box.appendChild(wrap);
   }catch(e){box.innerHTML='<div class="note">'+esc(e.message)+'</div>';}
+}
+async function rotCopiarPag(b){
+  var v=rotAtual();if(!v)return;
+  try{var pags=await rotPaginas(v),t=(pags[RT.pag-1]||'').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+    await navigator.clipboard.writeText(t);var o=b.textContent;b.textContent='Copiado';setTimeout(function(){b.textContent=o;},1400);}catch(e){alert('Não consegui copiar: '+e.message);}
 }
 async function rotMudancas(v){
   var el=$('rot-lat');if(!el)return;
@@ -508,7 +525,7 @@ function linksTodos(){
 }
 function vLinks(){
   var h=cab('Links','Os sites que os roteiros usam, num lugar só.');
-  h+='<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px"><input class="inp" type="search" id="lk-q" placeholder="Filtrar links..." value="'+esc(LK.q)+'" oninput="LK.q=this.value;lkLista()"><div id="lk-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px"></div></section>';
+  h+='<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px"><input class="inp" type="search" id="lk-q" placeholder="Filtrar links..." value="'+esc(LK.q)+'" oninput="LK.q=this.value;lkLista()"><div id="lk-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));grid-auto-rows:1fr;gap:10px"></div></section>';
   $('view').innerHTML=h;lkLista();
 }
 function lkLista(){
@@ -516,7 +533,7 @@ function lkLista(){
   var L=linksTodos().filter(function(l){return !LK.q.trim()||casa(l.n,LK.q);});
   var base='background:var(--soft);border-radius:14px;padding:12px 14px;';
   el.innerHTML=L.length?L.map(function(l){
-    if(l.links)return '<div style="'+base+'display:flex;flex-direction:column;gap:8px"><b style="font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="display:flex;gap:6px;flex-wrap:wrap">'+l.links.map(function(x){return '<a class="btn2 btn-sm" style="text-decoration:none" href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.rot)+' ↗</a>';}).join('')+'</span></div>';
+    if(l.links)return '<div style="'+base+'display:flex;flex-direction:column;justify-content:center;gap:6px"><b style="font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="display:flex;gap:6px;flex-wrap:nowrap">'+l.links.map(function(x){return '<a class="btn2 btn-sm" style="text-decoration:none;white-space:nowrap;padding:5px 6px;font-size:12px;flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;text-align:center" href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.rot)+'</a>';}).join('')+'</span></div>';
     return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="'+base+'display:flex;justify-content:space-between;align-items:center;gap:8px;text-decoration:none;font-weight:700;font-size:14px;color:#1F2A40"><span>'+esc(l.n)+'</span><span style="color:var(--muted)">↗</span></a>';
   }).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link.</span>';
 }
