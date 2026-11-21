@@ -659,10 +659,136 @@ async function iaEnviar(){
 }
 function iaModo(m){IA.modo=m;vIA();}
 function iaDest(d){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.destino=d;vIA();}
+/* ---- Tirar dúvida ---- */
+var DV={q:'',res:null,carregando:false,erro:'',hist:[],fontes:null,lendo:''};
+async function dvFontes(){try{DV.fontes=await db('fontes?select=id,nome,trechos,criado_em&order=nome');}catch(e){DV.fontes=[];DV.erroFontes=e.message;}if(atual==='ia'&&IA.modo==='duv')vIA();}
+function dvRespHtml(r){
+  var t=esc(r.texto).replace(/\[(\d+)\]/g,function(m,n){return '<a href="#" onclick="dvVer('+n+');return false" style="font-weight:800;color:var(--teal-ink);text-decoration:none">['+n+']</a>';});
+  t=t.replace(/^(Veredito|Fundamento|O que pedir ou conferir|Cenário A[^:\n]*|Cenário B[^:\n]*)(:)/gm,'<b>$1$2</b>');
+  return '<div style="white-space:pre-wrap;font-size:14.5px;line-height:1.6">'+t+'</div>';
+}
+function dvTrechosHtml(r){
+  if(!r.trechos||!r.trechos.length)return '<div style="font-size:13px;color:var(--muted)">Nenhum trecho da base foi encontrado para esta pergunta.</div>';
+  return '<details'+(DV.abrirTr?' open':'')+'><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--ink2)">Trechos usados · '+r.trechos.length+'</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'+
+    r.trechos.map(function(x,i){var rot=x.origem==='roteiro',tp=/consórcio/.test(x.fonte)?'cs':'fin';
+      return '<div id="dv-tr-'+(i+1)+'" style="background:var(--soft);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.5"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:13px">['+(i+1)+'] '+esc(x.fonte)+(x.ref?' · '+esc(x.ref):'')+'</b>'+
+        (rot?'<button class="btn2 btn-sm" onclick="RT.r=\''+tp+'\';RT.pag='+x.pagina+';RT.q=\'\';ir(\'rot\')">Abrir página</button>':'')+'</div><span style="color:var(--muted);white-space:pre-wrap">'+esc(x.texto.length>420?x.texto.slice(0,420)+'…':x.texto)+'</span></div>';}).join('')+'</div></details>';
+}
+function dvVer(n){DV.abrirTr=true;var d=document.querySelector('#view details');if(d)d.open=true;var e=$('dv-tr-'+n);if(e){e.scrollIntoView({behavior:'smooth',block:'center'});e.style.outline='2px solid var(--teal)';setTimeout(function(){e.style.outline='';},1500);}}
+async function dvEnviar(){
+  DV.q=$('dv-q').value;DV.erro='';
+  if(!DV.q.trim()){DV.erro='Escreva a dúvida antes de enviar.';vIA();return;}
+  var b=iaBloqueio(DV.q);if(b){DV.erro='A pergunta parece ter '+b+'. Tire os dados do cliente antes de enviar.';vIA();return;}
+  if(DV.res)DV.hist.unshift({q:DV.res.q,res:DV.res});DV.hist=DV.hist.slice(0,5);
+  DV.res=null;DV.abrirTr=false;DV.carregando=true;vIA();
+  try{var d=await iaChamar({modo:'duvida',texto:DV.q});d.q=DV.q;DV.res=d;DV.q='';}
+  catch(e){DV.erro=e.message;}
+  DV.carregando=false;vIA();
+}
+function dvHtml(){
+  if(DV.fontes===null){DV.fontes=undefined;dvFontes();}
+  var F=DV.fontes||[];
+  var h='<div class="row" style="margin-top:16px;align-items:flex-start">'+
+   '<div style="flex:3 1 480px;min-width:0;display:flex;flex-direction:column;gap:16px">'+
+   '<section class="card" style="display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Sua dúvida</b>'+
+     '<span style="font-size:13px;color:var(--muted)">Pergunte como perguntaria a um colega, sem dados do cliente. A resposta usa as leis e manuais abaixo e os roteiros do mês.</span>'+
+     '<textarea class="inp" id="dv-q" rows="4" placeholder="Ex.: Vendedor casado em comunhão parcial precisa da anuência do cônjuge se o imóvel foi comprado antes do casamento?" onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey))dvEnviar()">'+esc(DV.q)+'</textarea>'+
+     (DV.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(DV.erro)+'</div>':'')+
+     '<div style="display:flex;gap:10px;align-items:center"><button class="btn" onclick="dvEnviar()"'+(DV.carregando?' disabled':'')+'>'+(DV.carregando?'Procurando na base...':'Perguntar')+'</button><span style="font-size:12px;color:var(--muted)">Ctrl+Enter também envia</span></div></section>';
+  if(DV.res)h+='<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;color:var(--muted);font-weight:700">'+esc(DV.res.q)+'</div>'+dvRespHtml(DV.res)+
+     '<button class="btn2 btn-sm" style="align-self:flex-start" onclick="copiar(DV.res.texto,this)">Copiar resposta</button>'+dvTrechosHtml(DV.res)+'</section>';
+  if(DV.hist.length)h+='<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:15px">Perguntas anteriores</b>'+DV.hist.map(function(x){return '<details style="background:var(--soft);border-radius:14px;padding:10px 12px"><summary style="cursor:pointer;font-weight:700;font-size:13.5px">'+esc(x.q)+'</summary><div style="margin-top:8px">'+dvRespHtml(x.res)+'</div></details>';}).join('')+'<span style="font-size:12px;color:var(--muted)">Ficam só até você fechar a Bancada.</span></section>';
+  h+='</div><section class="card" style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px">Base da consulta</b>'+
+     '<div style="font-size:13px;color:var(--muted);line-height:1.5">Os roteiros do mês entram sozinhos. Leis e manuais você adiciona aqui uma vez (PDF, TXT ou a página da lei salva do Planalto).</div>'+
+     (DV.fontes===undefined?'<span style="font-size:13px;color:var(--muted)">Carregando...</span>':
+      (F.length?F.map(function(f){return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;background:var(--soft);border-radius:12px;padding:8px 12px"><span style="min-width:0"><b style="font-size:13.5px;display:block">'+esc(f.nome)+'</b><span style="font-size:12px;color:var(--muted)">'+f.trechos+' trechos</span></span><button class="btn2 btn-sm" onclick="dvRemover('+f.id+',\''+esc(f.nome).replace(/'/g,"\\'")+'\')" aria-label="Remover">Remover</button></div>';}).join(''):
+       '<span style="font-size:13px;color:var(--muted)">'+(DV.erroFontes?'Não consegui carregar. O SQL do Tirar dúvida já foi rodado?':'Nenhuma lei ou manual ainda.')+'</span>'))+
+     '<button class="btn2" onclick="dvSubirModal()">Adicionar lei ou manual</button></section></div>';
+  return h;
+}
+async function dvRemover(id,nome){if(!confirm('Remover "'+nome+'" da base?'))return;try{await db('fontes?id=eq.'+id,{method:'DELETE'});}catch(e){alert(e.message);}dvFontes();}
+function dvSubirModal(){
+  $('modal-root').innerHTML='<div class="ov" onclick="if(event.target===this&&!DV.enviando)fecharModal()"><div class="modal" role="dialog" aria-label="Adicionar lei ou manual">'+
+   '<b style="font-size:20px">Adicionar lei ou manual</b>'+
+   '<label class="fld"><span>Arquivo (PDF, TXT ou HTML)</span><input class="inp" type="file" id="f-arq" accept=".pdf,.txt,.htm,.html" onchange="var n=this.files[0];if(n&&!$(\'f-nome\').value)$(\'f-nome\').value=n.name.replace(/\\.[^.]+$/,\'\').replace(/[_]+/g,\' \')"></label>'+
+   '<label class="fld"><span>Nome que aparece nas respostas</span><input class="inp" id="f-nome" placeholder="Ex.: Lei 9.514/1997"></label>'+
+   '<div style="font-size:13px;color:var(--muted);line-height:1.5" id="f-status">Lei é dividida por artigo. Manual é dividido em trechos por página. Se já existir uma fonte com o mesmo nome, ela é substituída.</div>'+
+   '<div class="err" id="f-err"></div>'+
+   '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn2" onclick="fecharModal()">Cancelar</button><button class="btn" id="f-btn" onclick="dvSubir()">Adicionar</button></div></div></div>';
+}
+function dvStatus(t){var e=$('f-status');if(e)e.textContent=t;}
+function dvDecod(buf){
+  var u8=new Uint8Array(buf);
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(u8);}catch(e){return new TextDecoder('windows-1252').decode(u8);}
+}
+async function dvLer(file){
+  var nm=file.name.toLowerCase(),blocos=[];
+  if(nm.endsWith('.pdf')){
+    var lib=await pdfLib(),doc=await lib.getDocument({data:await file.arrayBuffer()}).promise;
+    for(var n=1;n<=doc.numPages;n++){
+      dvStatus('Lendo página '+n+' de '+doc.numPages+'...');
+      var tc=await (await doc.getPage(n)).getTextContent(),s='';
+      tc.items.forEach(function(x){s+=x.str+(x.hasEOL?'\n':' ');});
+      blocos.push({p:n,t:s.replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')});
+    }
+    return blocos;
+  }
+  var txt=dvDecod(await file.arrayBuffer());
+  if(/\.html?$/.test(nm)){
+    var d=new DOMParser().parseFromString(txt,'text/html');
+    d.querySelectorAll('script,style,strike,s,del').forEach(function(e){e.remove();});
+    d.querySelectorAll('br').forEach(function(e){e.replaceWith('\n');});
+    d.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr,blockquote,table').forEach(function(e){e.append('\n');});
+    txt=(d.body||d.documentElement).textContent;
+  }
+  return [{p:null,t:txt.replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')}];
+}
+function dvPartir(t,max){
+  var out=[],cur='';
+  t.split('\n').forEach(function(l){if((cur+'\n'+l).length>max&&cur.trim()){out.push(cur.trim());cur=l;}else cur+=(cur?'\n':'')+l;});
+  if(cur.trim())out.push(cur.trim());
+  return out;
+}
+function dvTrechos(blocos){
+  var tudo=blocos.map(function(b){return b.t;}).join('\n'),rx=/^[ \t]*Art\.?[ \t]*(\d[\d.]*)[ \t]*(º|°|o)?((-[A-Z])?)/gm,pos=[],m;
+  while((m=rx.exec(tudo)))pos.push({i:m.index,ref:'Art. '+m[1].replace(/\.$/,'')+(m[2]||(+m[1].replace(/\./g,'')<10?'º':''))+(m[3]||'')});
+  var out=[];
+  if(pos.length>=5){
+    var pre=tudo.slice(0,pos[0].i).trim();
+    if(pre)dvPartir(pre,2000).forEach(function(x){out.push({ref:'Ementa',texto:x});});
+    pos.forEach(function(p,k){
+      var t=tudo.slice(p.i,k+1<pos.length?pos[k+1].i:tudo.length).trim();
+      var partes=t.length>2500?dvPartir(t,2000):[t];
+      partes.forEach(function(x,j){out.push({ref:p.ref+(partes.length>1?' (parte '+(j+1)+')':''),texto:x});});
+    });
+  } else {
+    blocos.forEach(function(b,k){dvPartir(b.t,1300).forEach(function(x,j){if(x.length>40)out.push({ref:b.p?'p. '+b.p:'parte '+(out.length+1),texto:x});});});
+  }
+  return out;
+}
+async function dvSubir(){
+  var f=$('f-arq').files[0],nome=$('f-nome').value.trim();$('f-err').textContent='';
+  if(!f){$('f-err').textContent='Escolha o arquivo.';return;}
+  if(!nome){$('f-err').textContent='Dê um nome para a fonte.';return;}
+  DV.enviando=true;$('f-btn').disabled=true;
+  try{
+    var tr=dvTrechos(await dvLer(f));
+    if(!tr.length)throw new Error('Não encontrei texto no arquivo. Se for PDF escaneado (imagem), ele não tem texto para ler.');
+    dvStatus('Salvando '+tr.length+' trechos...');
+    var ant=await db('fontes?select=id&nome=eq.'+encodeURIComponent(nome));
+    if(ant&&ant.length)await db('fontes?id=eq.'+ant[0].id,{method:'DELETE'});
+    var fo=(await db('fontes',{method:'POST',body:JSON.stringify({nome:nome,trechos:tr.length})}))[0];
+    for(var i=0;i<tr.length;i+=300){
+      dvStatus('Salvando trechos '+(i+1)+' a '+Math.min(i+300,tr.length)+' de '+tr.length+'...');
+      await db('trechos',{method:'POST',body:JSON.stringify(tr.slice(i,i+300).map(function(x,j){return {fonte_id:fo.id,ordem:i+j,ref:x.ref,texto:x.texto};}))});
+    }
+    DV.enviando=false;fecharModal();dvFontes();
+  }catch(e){DV.enviando=false;var b=$('f-btn');if(b)b.disabled=false;$('f-err').textContent=e.message;dvStatus('');}
+}
 function vIA(){
   var h=cab('Assistente','Textos e dúvidas sem precisar passar pelo celular.',segHtml([['txt','Melhorar texto'],['duv','Tirar dúvida']],IA.modo,'iaModo'));
   if(IA.modo==='duv'){
-    h+='<section class="card" style="margin-top:16px;line-height:1.6"><b style="font-size:18px">Em construção</b><p style="color:var(--muted)">A consulta com base na legislação precisa que as leis sejam carregadas e divididas em trechos no banco. É a próxima etapa.</p></section>';
+    h+=dvHtml();
   } else {
     h+='<div class="row" style="margin-top:16px;align-items:stretch">'+
      '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Seu rascunho</b>'+
