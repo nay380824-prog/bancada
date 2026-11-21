@@ -113,7 +113,7 @@ abbr{text-decoration:underline dotted var(--teal);text-underline-offset:3px;colo
   <nav aria-label="Módulos">
     <div class="brand"><div class="logo">B</div>Bancada</div>
     <div id="nav-list"></div>
-    <div class="nav-foot"><span id="who"></span><button class="btn2 btn-sm" onclick="sair()">Sair</button></div>
+    <div class="nav-foot" style="justify-content:flex-end"><button class="btn2 btn-sm" onclick="sair()">Sair</button></div>
   </nav>
   <main>
     <div class="search-top">
@@ -241,7 +241,7 @@ function vPend(){
    '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px">'+
      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><b style="font-size:18px">Texto montado</b><div style="display:flex;gap:8px"><button class="btn2" onclick="PD.add=[];pdLista();pdSaida()">Limpar</button><button class="btn" id="pd-copy" onclick="pdCopiar(this)">Copiar texto</button></div></div>'+
      '<div class="pd-out" id="pd-out"></div>'+
-     '<div style="font-size:13px;color:var(--muted)"><mark>[CAMPO]</mark> vai com colchetes pro Word · aspas curvas e travessão viram caracteres simples ao copiar</div></section></div>';
+     '</section></div>';
   pdLista();pdSaida();
 }
 function pdMod(m){PD.mod=m;if(m==='cs'&&PD.canal==='fd')PD.canal='tr';PD.add=[];vPend();}
@@ -277,11 +277,14 @@ function pdCopiar(btn){var t=pdTexto();copiar(limparCopia([t.h,t.b,t.f].filter(B
 var RT={r:'fin'};
 function vRot(){
   var L=(D.linksRot&&D.linksRot[RT.r])||[];
-  var item=function(l,extra){return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="text-decoration:none;background:var(--soft);border-radius:14px;padding:10px 14px;display:block"><b style="display:block;font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="font-size:12px;color:var(--muted)">'+esc(l.s)+(l.p?' · p. '+l.p:'')+(extra?' · link extra':'')+'</span></a>';};
+  var lk='text-decoration:none;font-weight:700;font-size:14px;color:#1F2A40';
+  var item=function(l){
+    if(l.links)return '<div style="background:var(--soft);border-radius:14px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><b style="font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="display:flex;gap:6px;flex-wrap:wrap">'+l.links.map(function(x){return '<a class="btn2 btn-sm" style="text-decoration:none" href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.rot)+'</a>';}).join('')+'</span></div>';
+    return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="background:var(--soft);border-radius:14px;padding:12px 14px;display:block;'+lk+'">'+esc(l.n)+'</a>';
+  };
   $('view').innerHTML=cab('Roteiros','Os links dos roteiros do mês. O PDF com índice, busca e comparação chega na versão 2.',segHtml([['fin','Financiamento'],['cs','Consórcio']],RT.r,'rtSet'))+
    '<div class="row" style="margin-top:16px"><section class="card" style="flex:2 1 420px;min-width:0;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links rápidos · '+(RT.r==='fin'?'Financiamento':'Consórcio')+'</b>'+
-   (L.length?L.map(function(l){return item(l,false);}).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link carregado. Rode o SQL dos links dos roteiros no Supabase.</span>')+
-   D.links.map(function(l){return item(l,true);}).join('')+'</section>'+
+   (L.length?L.map(item).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link carregado. Rode o SQL dos links dos roteiros no Supabase.</span>')+'</section>'+
    '<section class="card" style="flex:1 1 260px;line-height:1.6"><b style="font-size:16px">Na versão 2</b><p style="color:var(--muted);font-size:14px;margin:6px 0 0">Você sobe o PDF do mês, a Bancada lê o índice e os links e mostra o que mudou em relação ao mês anterior. Os arquivos ficam num armazenamento privado do Supabase.</p></section></div>';
 }
 function rtSet(r){RT.r=r;vRot();}
@@ -526,7 +529,6 @@ document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key
 /* ====== INÍCIO ====== */
 async function iniciar(){
   $('login').classList.add('hide');$('app').classList.remove('hide');
-  $('who').textContent=sessao.email||'';
   $('view').innerHTML='<div class="note">Carregando...</div>';
   try{atual=localStorage.getItem('bancada_mod')||'pend';}catch(e){}
   renderNav();
