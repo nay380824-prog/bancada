@@ -63,7 +63,7 @@ main{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:16px}
 .pd-list{display:flex;flex-direction:column;gap:8px;height:560px;overflow-y:auto;padding-right:4px}
 .pd-item{display:flex;flex-direction:column;gap:4px;width:100%;text-align:left;border-radius:16px;padding:12px 14px;background:#fff;border:1px solid var(--line2);position:relative}
 .pd-item.add{background:#F1F7F5;border-color:#A9D9CB}
-.pd-item .tt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;padding-right:56px}
+.pd-item .tt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700}
 .pd-item .pv{font-size:13px;color:var(--muted);line-height:1.45}
 .pd-tools{position:absolute;right:10px;top:10px;display:flex;gap:4px}
 .ico{border:1px solid var(--line2);background:#fff;border-radius:8px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;padding:0}
@@ -185,11 +185,11 @@ $('login-form').onsubmit=async function(e){
 };
 
 /* ====== DADOS ====== */
-var D={textos:[],canais:{},inter:null,links:[]};
+var D={textos:[],canais:{},inter:null,links:[],linksRot:null};
 async function carregar(){
   var r=await Promise.all([db('pend_textos?select=*&order=ordem.asc,id.asc'),db('pend_canais?select=*'),db('conteudo?select=chave,dados')]);
   D.textos=r[0]||[];D.canais={};(r[1]||[]).forEach(function(c){D.canais[c.chave]={h:c.cabecalho,f:c.rodape};});
-  (r[2]||[]).forEach(function(c){if(c.chave==='intermediacao')D.inter=c.dados;if(c.chave==='links_extras')D.links=c.dados||[];});
+  (r[2]||[]).forEach(function(c){if(c.chave==='intermediacao')D.inter=c.dados;if(c.chave==='links_extras')D.links=c.dados||[];if(c.chave==='links_roteiro')D.linksRot=c.dados;});
 }
 
 /* ====== NAV ====== */
@@ -213,7 +213,7 @@ function cab(t,sub,dir){return '<div class="head"><div><h1>'+t+'</h1><p>'+sub+'<
 function segHtml(lista,ativo,fn){return '<div class="seg">'+lista.map(function(b){return '<button class="'+(b[0]===ativo?'on':'')+'" onclick="'+fn+'(\''+b[0]+'\')">'+b[1]+'</button>';}).join('')+'</div>';}
 
 /* ====== PENDÊNCIAS ====== */
-var PD={mod:'fin',canal:'tr',q:'',add:[]};
+var PD={mod:'fin',canal:'tr',q:'',add:[],editar:false};
 function pdCanalKey(){return PD.mod+'_'+(PD.mod==='cs'&&PD.canal==='fd'?'tr':PD.canal);}
 function pdItens(){
   var c=PD.canal==='wa'?'wa':'tr';
@@ -223,13 +223,13 @@ function pdTexto(){
   var ch=D.canais[pdCanalKey()]||{h:'',f:''};
   var adds=PD.add.map(function(id){return D.textos.find(function(t){return t.id===id;});}).filter(Boolean);
   var msg=adds.filter(function(t){return t.tipo==='msg';});
+  var junta=function(s){return String(s||'').replace(/\n\s*\n/g,'\n');};
   if(msg.length)return {h:'',b:msg[msg.length-1].texto,f:''};
-  if(!adds.length)return {h:'',b:'',f:''};
-  return {h:ch.h,b:adds.map(function(t){return t.texto;}).join('\n'),f:ch.f};
+  return {h:junta(ch.h),b:adds.map(function(t){return t.texto;}).join('\n'),f:junta(ch.f)};
 }
 function vPend(){
   var canais=[['tr','Tradicional']].concat(PD.mod==='fin'?[['fd','Funding']]:[]).concat([['wa','WhatsApp']]);
-  $('view').innerHTML=cab('Pendências','Monte o texto, copie e cole. Sem fechar a operação no outro sistema.','<button class="btn2" onclick="pdEditar()">+ Novo texto</button>')+
+  $('view').innerHTML=cab('Pendências','Monte o texto, copie e cole. Sem fechar a operação no outro sistema.','<div style="display:flex;gap:8px"><button class="btn2" onclick="PD.editar=!PD.editar;vPend()">'+(PD.editar?'Concluir edição':'Editar textos')+'</button><button class="btn2" onclick="pdEditar()">+ Novo texto</button></div>')+
    '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:16px">'+segHtml([['fin','Financiamento'],['cs','Consórcio']],PD.mod,'pdMod')+segHtml(canais,PD.canal,'pdCanal')+'</div>'+
    '<div class="row" style="margin-top:16px;align-items:stretch">'+
    '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px">'+
@@ -250,7 +250,7 @@ function pdLista(){
   $('pd-list').innerHTML=l.length?l.map(function(t){
     var ad=PD.add.indexOf(t.id)>=0,pv=t.texto.replace(/\n/g,' ');if(pv.length>150)pv=pv.slice(0,150)+'…';
     return '<div class="pd-item'+(ad?' add':'')+'" role="button" tabindex="0" onclick="pdAdd('+t.id+')" onkeydown="if(event.key===\'Enter\')pdAdd('+t.id+')">'+
-      '<div class="pd-tools"><button class="ico" title="Editar" aria-label="Editar" onclick="event.stopPropagation();pdEditar('+t.id+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button></div>'+
+      (PD.editar?'<div class="pd-tools"><button class="ico" title="Editar" aria-label="Editar" onclick="event.stopPropagation();pdEditar('+t.id+')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20h4L18 10l-4-4L4 16z"/></svg></button></div>':'')+
       '<div class="tt">'+esc(t.nome)+(t.tipo==='msg'?'<span class="tag t-msg">mensagem pronta</span>':'')+(t.revisar?'<span class="tag t-rev">revisar</span>':'')+(t.modalidade==='cs'?'<span class="tag t-cs">consórcio</span>':'')+(ad?'<span style="font-size:12px;color:var(--teal-ink)">adicionado</span>':'')+'</div>'+
       '<div class="pv">'+esc(pv)+'</div></div>';
   }).join(''):'<div style="color:var(--muted);font-size:14px;padding:20px">Nada encontrado. Tente outra palavra.</div>';
@@ -265,13 +265,12 @@ function pdAdd(id){
 }
 function pdSaida(){
   var t=pdTexto(),h='';
-  if(!t.b){$('pd-out').innerHTML='<div style="color:var(--muted);text-align:center;padding:40px 10px;white-space:normal">Clique nos textos da esquerda para montar a pendência.</div>';return;}
   if(t.h)h+='<div class="hf">'+marcar(t.h)+'</div>\n';
-  h+='<div>'+marcar(t.b)+'</div>';
+  h+=t.b?'<div>'+marcar(t.b)+'</div>':'<div style="color:var(--muted);font-style:italic">[clique nos textos da esquerda para incluir as pendências aqui]</div>';
   if(t.f)h+='\n<div class="hf">'+marcar(t.f)+'</div>';
   $('pd-out').innerHTML=h;
 }
-function pdCopiar(btn){var t=pdTexto();if(!t.b)return;copiar(limparCopia([t.h,t.b,t.f].filter(Boolean).join('\n\n')),btn);}
+function pdCopiar(btn){var t=pdTexto();copiar(limparCopia([t.h,t.b,t.f].filter(Boolean).join('\n\n')),btn);}
 function pdEditar(id){
   var t=id?D.textos.find(function(x){return x.id===id;}):{canal:PD.canal==='wa'?'wa':'tr',modalidade:'*',tipo:'item',revisar:false,nome:'',texto:''};
   var sel=function(nm,ops,v){return '<select class="inp" id="'+nm+'">'+ops.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>';}).join('')+'</select>';};
@@ -307,15 +306,18 @@ async function pdExcluir(id){
   catch(e){$('e-err').textContent='Não consegui excluir: '+e.message;}
 }
 
-/* ====== ROTEIROS (v1: links extras; PDFs na v2) ====== */
+/* ====== ROTEIROS (v1: links; PDFs na v2) ====== */
+var RT={r:'fin'};
 function vRot(){
-  $('view').innerHTML=cab('Roteiros','Os PDFs do mês com índice, busca e comparação chegam na versão 2.')+
-   '<div class="row" style="margin-top:16px">'+
-   '<section class="card" style="flex:2 1 380px"><b style="font-size:18px">Na versão 2</b><p style="color:var(--muted);line-height:1.6">Você sobe o PDF do mês, a Bancada lê o índice e os links e mostra o que mudou em relação ao mês anterior. Os arquivos ficam num armazenamento privado do Supabase, só com o seu login.</p></section>'+
-   '<section class="card" style="flex:1 1 280px;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links extras</b>'+
-   (D.links.length?D.links.map(function(l){return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="text-decoration:none;background:var(--soft);border-radius:14px;padding:9px 12px;display:block"><b style="display:block;font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="font-size:12px;color:var(--muted)">'+esc(l.s)+'</span></a>';}).join(''):'<span style="color:var(--muted)">Nenhum link.</span>')+
-   '</section></div>';
+  var L=(D.linksRot&&D.linksRot[RT.r])||[];
+  var item=function(l,extra){return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="text-decoration:none;background:var(--soft);border-radius:14px;padding:10px 14px;display:block"><b style="display:block;font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="font-size:12px;color:var(--muted)">'+esc(l.s)+(l.p?' · p. '+l.p:'')+(extra?' · link extra':'')+'</span></a>';};
+  $('view').innerHTML=cab('Roteiros','Os links dos roteiros do mês. O PDF com índice, busca e comparação chega na versão 2.',segHtml([['fin','Financiamento'],['cs','Consórcio']],RT.r,'rtSet'))+
+   '<div class="row" style="margin-top:16px"><section class="card" style="flex:2 1 420px;min-width:0;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links rápidos · '+(RT.r==='fin'?'Financiamento':'Consórcio')+'</b>'+
+   (L.length?L.map(function(l){return item(l,false);}).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link carregado. Rode o SQL dos links dos roteiros no Supabase.</span>')+
+   D.links.map(function(l){return item(l,true);}).join('')+'</section>'+
+   '<section class="card" style="flex:1 1 260px;line-height:1.6"><b style="font-size:16px">Na versão 2</b><p style="color:var(--muted);font-size:14px;margin:6px 0 0">Você sobe o PDF do mês, a Bancada lê o índice e os links e mostra o que mudou em relação ao mês anterior. Os arquivos ficam num armazenamento privado do Supabase.</p></section></div>';
 }
+function rtSet(r){RT.r=r;vRot();}
 
 /* ====== SIMULADOR ====== */
 var SM={mod:'cs',cv:'890590',av:'887000',disp:'437121.01',tar:'550',fin:'400000',decl:'420000',saldo:'468075.77',iq:true,boleto:'210000',tot:false,dif:'fin'};
