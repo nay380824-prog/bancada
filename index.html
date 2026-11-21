@@ -2,8 +2,15 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bancada</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icones/icone-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bancada">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F2EF">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Urbanist:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -16,7 +23,7 @@ a{color:var(--accent)}
 mark{background:#FFE89A;color:#3A2E00;border-radius:4px;padding:0 3px;font-weight:700}
 .hide{display:none!important}
 body.cel nav,body.cel .search-top{display:none!important}
-body.cel #app{padding:14px}
+body.cel #app{padding:calc(14px + env(safe-area-inset-top)) 14px calc(14px + env(safe-area-inset-bottom))}
 body.cel main{flex:1 1 100%}
 .so-cel{display:none}
 @media(max-width:760px){.so-cel{display:block}}
