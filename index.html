@@ -407,10 +407,57 @@ function vCert(){
    '<div class="note" style="margin-top:16px"><b>Validade:</b> o certificado emitido na Uniproof vale 1 ano.</div>';
 }
 
-/* ====== ASSISTENTE (v2) ====== */
+/* ====== ASSISTENTE ====== */
+var IA={modo:'txt',destino:'email',texto:'',res:null,carregando:false,erro:'',teste:''};
+var IA_BLOQ=[[/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/,'CPF'],[/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/,'CNPJ'],[/[\w.+-]+@[\w-]+\.[\w.-]+/,'e-mail'],[/(\(?\b\d{2}\)?\s?)?\b9?\d{4}-?\d{4}\b/,'telefone'],[/matr[ií]cula\s*(n[º°o.]*\s*)?\d/i,'número de matrícula']];
+function iaBloqueio(t){for(var i=0;i<IA_BLOQ.length;i++)if(IA_BLOQ[i][0].test(t))return IA_BLOQ[i][1];return null;}
+async function iaChamar(body){
+  var t=await token();
+  var r=await fetch(SB_URL+'/functions/v1/assistente',{method:'POST',headers:{'Authorization':'Bearer '+t,'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
+  var d={};try{d=await r.json();}catch(e){}
+  if(!r.ok)throw new Error(d.erro||d.message||('Erro '+r.status+(r.status===404?': a função "assistente" ainda não foi criada no Supabase.':'')));
+  return d;
+}
+async function iaTestar(){
+  IA.teste='Testando...';vIA();
+  try{var d=await iaChamar({modo:'teste'});IA.teste='✓ Conexão funcionando ('+d.modelo+' respondeu "'+d.resposta+'").';}
+  catch(e){IA.teste='✗ '+e.message;}
+  vIA();
+}
+async function iaEnviar(){
+  IA.texto=$('ia-txt').value;IA.erro='';IA.res=null;
+  if(!IA.texto.trim()){IA.erro='Cole o texto antes de enviar.';vIA();return;}
+  var b=iaBloqueio(IA.texto);
+  if(b){IA.erro='O texto parece ter '+b+'. Troque por um campo como [NOME] ou [CPF] antes de enviar.';vIA();return;}
+  IA.carregando=true;vIA();
+  try{IA.res=await iaChamar({modo:'texto',texto:IA.texto,destino:IA.destino});}
+  catch(e){IA.erro=e.message;}
+  IA.carregando=false;vIA();
+}
+function iaModo(m){IA.modo=m;vIA();}
+function iaDest(d){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.destino=d;vIA();}
 function vIA(){
-  $('view').innerHTML=cab('Assistente','Textos e dúvidas sem precisar passar pelo celular.')+
-   '<section class="card" style="margin-top:16px;line-height:1.6"><b style="font-size:18px">Na versão 2</b><p style="color:var(--muted)">Dois modos: melhorar texto (e-mail, WhatsApp, pendência formal) e tirar dúvida com base na legislação. Antes, a gente testa se a rede do banco libera o acesso.</p></section>';
+  var h=cab('Assistente','Textos e dúvidas sem precisar passar pelo celular.',segHtml([['txt','Melhorar texto'],['duv','Tirar dúvida']],IA.modo,'iaModo'));
+  if(IA.modo==='duv'){
+    h+='<section class="card" style="margin-top:16px;line-height:1.6"><b style="font-size:18px">Em construção</b><p style="color:var(--muted)">A consulta com base na legislação precisa que as leis sejam carregadas e divididas em trechos no banco. É a próxima etapa.</p></section>';
+  } else {
+    h+='<div class="row" style="margin-top:16px;align-items:stretch">'+
+     '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Seu rascunho</b>'+
+     '<span style="font-size:13px;color:var(--muted)">Cole o texto do jeito que está. Use [NOME] no lugar de dados do cliente.</span>'+
+     '<textarea class="inp" id="ia-txt" rows="12" placeholder="Cole aqui o rascunho do e-mail ou da pendência">'+esc(IA.texto)+'</textarea>'+
+     '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><b style="font-size:13px;color:var(--ink2)">Para:</b>'+
+       [['email','E-mail'],['whatsapp','WhatsApp'],['pendencia','Pendência formal']].map(function(x){return '<button class="chip'+(IA.destino===x[0]?' on':'')+'" onclick="iaDest(\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div>'+
+     (IA.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(IA.erro)+'</div>':'')+
+     '<button class="btn" style="align-self:flex-start" onclick="iaEnviar()"'+(IA.carregando?' disabled':'')+'>'+(IA.carregando?'Melhorando...':'Melhorar texto')+'</button></section>'+
+     '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Texto revisado</b>'+
+     (IA.res?'<div class="pd-out" style="height:auto;min-height:220px">'+marcar(IA.res.texto)+'</div>'+
+       (IA.res.mudancas?'<div style="background:var(--soft);border-radius:14px;padding:10px 14px;font-size:13px;white-space:pre-wrap"><b style="display:block;font-size:12px;color:#4F555E;margin-bottom:2px">O QUE MUDOU</b>'+esc(IA.res.mudancas)+'</div>':'')+
+       '<button class="btn2" style="align-self:flex-start" id="ia-copy" onclick="copiar(limparCopia(IA.res.texto),this)">Copiar texto</button>'
+      :'<div style="color:var(--muted);font-size:14px;padding:30px 10px;text-align:center">O texto revisado aparece aqui.</div>')+
+     '</section></div>';
+  }
+  h+='<div class="note" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>'+(IA.teste?esc(IA.teste):'Primeira vez? Teste se a Bancada consegue falar com a IA.')+'</span><button class="btn2 btn-sm" onclick="iaTestar()">Testar conexão</button></div>';
+  $('view').innerHTML=h;
 }
 
 /* ====== INTERMEDIAÇÃO ====== */
