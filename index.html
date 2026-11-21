@@ -273,21 +273,238 @@ function pdSaida(){
   $('pd-out').innerHTML=h;
 }
 function pdCopiar(btn){var t=pdTexto();copiar(limparCopia([t.h,t.b,t.f].filter(Boolean).join('\n\n')),btn);}
-/* ====== ROTEIROS (v1: links; PDFs na v2) ====== */
-var RT={r:'fin'};
-function vRot(){
+/* ====== ROTEIROS (PDF) ====== */
+var RT={r:'fin',ver:{fin:null,cs:null},pag:1,q:'',docs:{},carregado:false,lendo:'',zoom:1,aberto:-1};
+var ROT=[];            // versões (sem o texto das páginas)
+var ROT_PAG={};        // id -> array de textos por página
+async function pdfLib(){
+  if(window.pdfjsLib)return window.pdfjsLib;
+  var m=await import('./lib/pdf.min.mjs');
+  m.GlobalWorkerOptions.workerSrc='./lib/pdf.worker.min.mjs';
+  window.pdfjsLib=m;return m;
+}
+function uidAtual(){try{return JSON.parse(atob(sessao.access_token.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).sub;}catch(e){return null;}}
+async function rotCarregarLista(){
+  ROT=await db('roteiros?select=id,tipo,mes,arquivo,paginas_total,indice,links,criado_em&order=mes.desc')||[];
+  RT.carregado=true;
+  ['fin','cs'].forEach(function(t){var v=rotVersoes(t);if(!RT.ver[t]||!v.some(function(x){return x.id===RT.ver[t];}))RT.ver[t]=v.length?v[0].id:null;});
+}
+function rotVersoes(t){return ROT.filter(function(x){return x.tipo===t;});}
+function rotAtual(){return ROT.find(function(x){return x.id===RT.ver[RT.r];})||null;}
+function rotAnterior(v){var l=rotVersoes(v.tipo);var i=l.findIndex(function(x){return x.id===v.id;});return i>=0&&i<l.length-1?l[i+1]:null;}
+async function rotPaginas(v){
+  if(ROT_PAG[v.id])return ROT_PAG[v.id];
+  var r=await db('roteiros?select=paginas&id=eq.'+v.id);ROT_PAG[v.id]=(r&&r[0]&&r[0].paginas)||[];return ROT_PAG[v.id];
+}
+async function rotDoc(v){
+  if(RT.docs[v.id])return RT.docs[v.id];
+  var t=await token();
+  var r=await fetch(SB_URL+'/storage/v1/object/authenticated/roteiros/'+v.arquivo,{headers:{'Authorization':'Bearer '+t,'apikey':SB_KEY}});
+  if(!r.ok)throw new Error('Não consegui baixar o PDF ('+r.status+').');
+  var buf=await r.arrayBuffer(),lib=await pdfLib();
+  RT.docs[v.id]=await lib.getDocument({data:buf}).promise;return RT.docs[v.id];
+}
+function mesNome(m){var p=String(m).split('-');var n=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][(+p[1]||1)-1];return n+'/'+p[0];}
+
+/* ---- leitura do PDF na hora de subir ---- */
+async function rotLer(file){
+  var lib=await pdfLib(),buf=await file.arrayBuffer();
+  var doc=await lib.getDocument({data:buf.slice(0)}).promise;
+  var indice=[],links=[],paginas=[],vistos={};
+  async function walk(items,nivel){
+    for(var i=0;i<(items||[]).length;i++){
+      var it=items[i],p=null;
+      try{var dest=typeof it.dest==='string'?await doc.getDestination(it.dest):it.dest;if(dest&&dest[0])p=(typeof dest[0]==='object'?await doc.getPageIndex(dest[0]):dest[0])+1;}catch(e){}
+      var t=String(it.title||'').replace(/\s+/g,' ').trim();
+      if(t&&p)indice.push({t:t,p:p,n:nivel});
+      if(it.items&&it.items.length&&nivel<2)await walk(it.items,nivel+1);
+    }
+  }
+  try{await walk(await doc.getOutline(),0);}catch(e){}
+  for(var n=1;n<=doc.numPages;n++){
+    RT.lendo='Lendo página '+n+' de '+doc.numPages+'...';rotStatus();
+    var pg=await doc.getPage(n),tc=await pg.getTextContent(),s='';
+    tc.items.forEach(function(x){s+=x.str+(x.hasEOL?'\n':' ');});
+    paginas.push(s.replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n').trim());
+    var an=await pg.getAnnotations();
+    an.forEach(function(a){if(a.subtype==='Link'&&a.url&&!vistos[a.url]){vistos[a.url]=1;links.push({u:a.url,p:n});}});
+  }
+  return {indice:indice,links:links,paginas:paginas,total:doc.numPages};
+}
+function rotStatus(){var e=$('rot-status');if(e)e.textContent=RT.lendo;}
+function rotSubirModal(){
+  var hoje=new Date(),m=hoje.getFullYear()+'-'+('0'+(hoje.getMonth()+1)).slice(-2);
+  $('modal-root').innerHTML='<div class="ov" onclick="if(event.target===this&&!RT.enviando)fecharModal()"><div class="modal" role="dialog" aria-label="Subir roteiro">'+
+   '<b style="font-size:20px">Subir roteiro do mês</b>'+
+   '<div class="row" style="gap:10px"><label class="fld" style="flex:1 1 160px"><span>Roteiro</span><select class="inp" id="u-tipo"><option value="fin"'+(RT.r==='fin'?' selected':'')+'>Financiamento</option><option value="cs"'+(RT.r==='cs'?' selected':'')+'>Consórcio</option></select></label>'+
+   '<label class="fld" style="flex:1 1 160px"><span>Mês</span><input class="inp" type="month" id="u-mes" value="'+m+'"></label></div>'+
+   '<label class="fld"><span>Arquivo PDF</span><input class="inp" type="file" id="u-arq" accept="application/pdf"></label>'+
+   '<div style="font-size:13px;color:var(--muted)" id="rot-status">A Bancada lê o índice, os links e o texto de cada página. Pode levar alguns segundos.</div>'+
+   '<div class="err" id="u-err"></div>'+
+   '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn2" onclick="fecharModal()">Cancelar</button><button class="btn" id="u-btn" onclick="rotSubir()">Subir</button></div></div></div>';
+}
+async function rotSubir(){
+  var f=$('u-arq').files[0],tipo=$('u-tipo').value,mes=$('u-mes').value;
+  if(!f||!mes){$('u-err').textContent='Escolha o mês e o arquivo.';return;}
+  if(f.type&&f.type!=='application/pdf'){$('u-err').textContent='O arquivo precisa ser PDF.';return;}
+  var uid=uidAtual();if(!uid){$('u-err').textContent='Sessão inválida. Saia e entre de novo.';return;}
+  RT.enviando=true;$('u-btn').disabled=true;$('u-err').textContent='';
+  try{
+    var dados=await rotLer(f);
+    RT.lendo='Enviando o arquivo...';rotStatus();
+    var caminho=uid+'/'+tipo+'-'+mes+'.pdf',t=await token();
+    var r=await fetch(SB_URL+'/storage/v1/object/roteiros/'+caminho,{method:'POST',headers:{'Authorization':'Bearer '+t,'apikey':SB_KEY,'Content-Type':'application/pdf','x-upsert':'true'},body:f});
+    if(!r.ok){var tx=await r.text();throw new Error('Envio do arquivo: '+tx);}
+    RT.lendo='Salvando...';rotStatus();
+    var antigo=ROT.find(function(x){return x.tipo===tipo&&x.mes===mes;});
+    var row={tipo:tipo,mes:mes,arquivo:caminho,paginas_total:dados.total,indice:dados.indice,links:dados.links,paginas:dados.paginas};
+    if(antigo){await db('roteiros?id=eq.'+antigo.id,{method:'PATCH',body:JSON.stringify(row)});delete ROT_PAG[antigo.id];delete RT.docs[antigo.id];}
+    else await db('roteiros',{method:'POST',body:JSON.stringify(row)});
+    await rotCarregarLista();
+    RT.r=tipo;var nv=ROT.find(function(x){return x.tipo===tipo&&x.mes===mes;});RT.ver[tipo]=nv?nv.id:RT.ver[tipo];RT.pag=1;
+    RT.enviando=false;fecharModal();vRot();
+  }catch(e){RT.enviando=false;$('u-btn').disabled=false;$('u-err').textContent=e.message;}
+}
+
+/* ---- diferenças entre dois meses ---- */
+function rotLinhas(pags){
+  var out=[];
+  pags.forEach(function(txt,i){String(txt||'').split('\n').forEach(function(l){
+    var s=l.replace(/\s+/g,' ').trim();if(s.length<4||/^\d+$/.test(s))return;out.push({s:s,k:semAc(s),p:i+1});
+  });});
+  return out;
+}
+function rotDiff(a,b){
+  var i0=0;while(i0<a.length&&i0<b.length&&a[i0].k===b[i0].k)i0++;
+  var ea=a.length,eb=b.length;while(ea>i0&&eb>i0&&a[ea-1].k===b[eb-1].k){ea--;eb--;}
+  var A=a.slice(i0,ea),B=b.slice(i0,eb),n=A.length,m=B.length;
+  if(n*m>16e6)return null;
+  var L=new Array(n+1);for(var i=0;i<=n;i++)L[i]=new Uint16Array(m+1);
+  for(i=n-1;i>=0;i--)for(var j=m-1;j>=0;j--)L[i][j]=A[i].k===B[j].k?L[i+1][j+1]+1:Math.max(L[i+1][j],L[i][j+1]);
+  var ops=[];i=0;j=0;
+  while(i<n||j<m){
+    if(i<n&&j<m&&A[i].k===B[j].k){ops.push({t:'=',p:B[j].p});i++;j++;}
+    else if(j<m&&(i>=n||L[i][j+1]>=L[i+1][j])){ops.push({t:'+',s:B[j].s,p:B[j].p});j++;}
+    else{ops.push({t:'-',s:A[i].s,p:A[i].p});i++;}
+  }
+  var blocos=[],cur=null,ultP=1;
+  ops.forEach(function(o){
+    if(o.t==='='){ultP=o.p;if(cur){blocos.push(cur);cur=null;}return;}
+    if(!cur)cur={p:o.t==='+'?o.p:ultP,rem:[],add:[]};
+    (o.t==='+'?cur.add:cur.rem).push(o.s);
+  });
+  if(cur)blocos.push(cur);
+  return blocos;
+}
+function rotSecao(v,p){var s=null;(v.indice||[]).forEach(function(x){if(x.n===0&&x.p<=p)s=x.t;});return s||'Início';}
+
+/* ---- tela ---- */
+async function vRot(){
+  if(!RT.carregado){
+    $('view').innerHTML='<div class="note">Carregando roteiros...</div>';
+    try{await rotCarregarLista();}catch(e){$('view').innerHTML=cab('Roteiros','')+'<div class="note" style="margin-top:16px">Não consegui carregar os roteiros. O SQL dos roteiros já foi rodado no Supabase?<br><small>'+esc(e.message)+'</small></div>';return;}
+  }
+  var v=rotAtual(),vers=rotVersoes(RT.r);
+  var dir='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+segHtml([['fin','Financiamento'],['cs','Consórcio']],RT.r,'rtSet')+
+    (vers.length>1?'<select class="inp" style="width:auto;padding:9px 14px" onchange="RT.ver[RT.r]=+this.value;RT.pag=1;vRot()">'+vers.map(function(x){return '<option value="'+x.id+'"'+(x.id===RT.ver[RT.r]?' selected':'')+'>'+mesNome(x.mes)+'</option>';}).join('')+'</select>':'')+
+    '<button class="btn2" onclick="rotSubirModal()">Subir roteiro do mês</button></div>';
   var L=(D.linksRot&&D.linksRot[RT.r])||[];
   var lk='text-decoration:none;font-weight:700;font-size:14px;color:#1F2A40';
   var item=function(l){
     if(l.links)return '<div style="background:var(--soft);border-radius:14px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><b style="font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="display:flex;gap:6px;flex-wrap:wrap">'+l.links.map(function(x){return '<a class="btn2 btn-sm" style="text-decoration:none" href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.rot)+'</a>';}).join('')+'</span></div>';
-    return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="background:var(--soft);border-radius:14px;padding:12px 14px;display:block;'+lk+'">'+esc(l.n)+'</a>';
+    return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="background:var(--soft);border-radius:14px;padding:10px 14px;display:block;'+lk+'">'+esc(l.n)+'</a>';
   };
-  $('view').innerHTML=cab('Roteiros','Os links dos roteiros do mês. O PDF com índice, busca e comparação chega na versão 2.',segHtml([['fin','Financiamento'],['cs','Consórcio']],RT.r,'rtSet'))+
-   '<div class="row" style="margin-top:16px"><section class="card" style="flex:2 1 420px;min-width:0;display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links rápidos · '+(RT.r==='fin'?'Financiamento':'Consórcio')+'</b>'+
-   (L.length?L.map(item).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link carregado. Rode o SQL dos links dos roteiros no Supabase.</span>')+'</section>'+
-   '<section class="card" style="flex:1 1 260px;line-height:1.6"><b style="font-size:16px">Na versão 2</b><p style="color:var(--muted);font-size:14px;margin:6px 0 0">Você sobe o PDF do mês, a Bancada lê o índice e os links e mostra o que mudou em relação ao mês anterior. Os arquivos ficam num armazenamento privado do Supabase.</p></section></div>';
+  var linksBox='<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links rápidos</b>'+(L.length?L.map(item).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link.</span>')+'</section>';
+  if(!v){
+    $('view').innerHTML=cab('Roteiros','O PDF do mês, com índice, busca e o que mudou.',dir)+
+     '<div class="row" style="margin-top:16px"><section class="card" style="flex:2 1 420px;line-height:1.6"><b style="font-size:18px">Nenhum roteiro de '+(RT.r==='fin'?'financiamento':'consórcio')+' ainda</b><p style="color:var(--muted)">Clique em "Subir roteiro do mês" e escolha o PDF. A Bancada guarda o arquivo no armazenamento privado e lê o índice, os links e o texto de cada página.</p></section>'+
+     '<div style="flex:1 1 280px;max-width:360px">'+linksBox+'</div></div>';
+    return;
+  }
+  if(RT.pag>v.paginas_total)RT.pag=1;
+  $('view').innerHTML=cab('Roteiros',(RT.r==='fin'?'Financiamento':'Consórcio')+' · '+mesNome(v.mes)+' · '+v.paginas_total+' páginas',dir)+
+   '<div class="row" style="margin-top:16px;align-items:flex-start">'+
+   '<section class="card" style="flex:1 1 240px;max-width:300px;padding:16px 10px;display:flex;flex-direction:column;gap:8px">'+
+     '<input class="inp" type="search" id="rot-q" placeholder="Buscar no roteiro..." value="'+esc(RT.q)+'" oninput="RT.q=this.value;rotLateral()">'+
+     '<div id="rot-lat" style="display:flex;flex-direction:column;gap:2px;max-height:680px;overflow-y:auto"></div></section>'+
+   '<section class="card" style="flex:2 1 460px;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px">'+
+     '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
+       '<div style="display:flex;gap:6px;align-items:center"><button class="btn2 btn-sm" onclick="rotIr(RT.pag-1)" aria-label="Página anterior">‹</button>'+
+       '<span style="font-size:14px;font-weight:700">página <input type="number" min="1" max="'+v.paginas_total+'" value="'+RT.pag+'" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;text-align:center" onchange="rotIr(+this.value)"> de '+v.paginas_total+'</span>'+
+       '<button class="btn2 btn-sm" onclick="rotIr(RT.pag+1)" aria-label="Próxima página">›</button></div>'+
+       '<div style="display:flex;gap:6px"><button class="btn2 btn-sm" onclick="RT.zoom=Math.max(.6,RT.zoom-.2);rotDesenhar()" aria-label="Diminuir">−</button><button class="btn2 btn-sm" onclick="RT.zoom=Math.min(2.4,RT.zoom+.2);rotDesenhar()" aria-label="Aumentar">+</button></div></div>'+
+     '<div id="rot-sec" style="font-size:13px;color:var(--muted);font-weight:700"></div>'+
+     '<div id="rot-pag" style="background:#EDEBE6;border-radius:14px;padding:12px;overflow:auto;min-height:500px;display:flex;justify-content:center"><div class="note">Abrindo o PDF...</div></div></section>'+
+   '<div style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:16px">'+
+     '<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">O que mudou</b><div id="rot-diff" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"><span style="font-size:13px;color:var(--muted)">Comparando...</span></div></section>'+
+     linksBox+'</div></div>';
+  rotLateral();rotDesenhar();rotMudancas(v);
 }
-function rtSet(r){RT.r=r;vRot();}
+function rtSet(r){RT.r=r;RT.pag=1;RT.q='';vRot();}
+function rotIr(p){var v=rotAtual();if(!v)return;p=Math.max(1,Math.min(v.paginas_total,p||1));RT.pag=p;rotDesenhar();var i=document.querySelector('#rot-pag');if(i)i.scrollTop=0;}
+async function rotLateral(){
+  var v=rotAtual(),el=$('rot-lat');if(!v||!el)return;
+  var q=semAc(RT.q).trim();
+  if(q.length<2){
+    var ind=v.indice||[],sec=[],cur=null;
+    ind.forEach(function(x){if(x.n===0){if(cur&&cur.t===x.t)return;cur={t:x.t,p:x.p,f:[]};sec.push(cur);}else if(x.n===1&&cur){if(!cur.f.some(function(y){return y.t===x.t;}))cur.f.push(x);}});
+    var bt=function(t,p,sub,extra){return '<button onclick="'+extra+'rotIr('+p+')" style="display:flex;justify-content:space-between;gap:8px;border:0;background:transparent;border-radius:10px;padding:'+(sub?'4px 10px 4px 22px':'8px 10px')+';text-align:left;font-size:'+(sub?'12.5px':'14px')+';font-weight:'+(sub?'500':'700')+';color:'+(sub?'var(--muted)':'var(--ink)')+'"><span>'+esc(sub&&t.length>70?t.slice(0,68)+'…':t)+'</span><span style="font-size:11px;color:var(--muted);flex:none">'+p+'</span></button>';};
+    el.innerHTML=sec.length?sec.map(function(x,k){var ab=RT.aberto===k;return bt((x.f.length?(ab?'▾ ':'▸ '):'')+x.t,x.p,false,'RT.aberto=(RT.aberto==='+k+'?-1:'+k+');rotLateral();')+(ab?x.f.map(function(y){return bt(y.t,y.p,true,'');}).join(''):'');}).join(''):'<span style="font-size:13px;color:var(--muted);padding:8px">Este PDF não tem índice (marcadores).</span>';
+    return;
+  }
+  el.innerHTML='<span style="font-size:13px;color:var(--muted);padding:8px">Buscando...</span>';
+  var pags=await rotPaginas(v),res=[];
+  pags.forEach(function(t,i){var a=semAc(t),k=a.indexOf(q);if(k>=0){var ini=Math.max(0,k-50);res.push({p:i+1,s:(ini>0?'…':'')+t.slice(ini,k+q.length+80).replace(/\s+/g,' ')+'…'});}});
+  if(semAc(RT.q).trim()!==q)return;
+  el.innerHTML=res.length?'<span style="font-size:12px;color:var(--muted);padding:4px 8px">'+res.length+' página'+(res.length>1?'s':'')+'</span>'+res.map(function(r){return '<button onclick="rotIr('+r.p+')" style="border:0;background:var(--soft);border-radius:12px;padding:8px 10px;text-align:left;margin-bottom:4px"><b style="font-size:12px;display:block">página '+r.p+'</b><span style="font-size:12px;color:var(--muted)">'+esc(r.s)+'</span></button>';}).join(''):'<span style="font-size:13px;color:var(--muted);padding:8px">Nada encontrado.</span>';
+}
+var _rotRender=0;
+async function rotDesenhar(){
+  var v=rotAtual(),box=$('rot-pag');if(!v||!box)return;
+  var meu=++_rotRender;
+  $('rot-sec').textContent=rotSecao(v,RT.pag);
+  var inp=document.querySelector('#view input[type=number]');if(inp)inp.value=RT.pag;
+  try{
+    var doc=await rotDoc(v);if(meu!==_rotRender)return;
+    var pg=await doc.getPage(RT.pag);
+    var largura=Math.max(320,box.clientWidth-24);
+    var base=pg.getViewport({scale:1}),esc1=(largura/base.width)*RT.zoom;
+    var vp=pg.getViewport({scale:esc1}),dpr=window.devicePixelRatio||1;
+    var wrap=document.createElement('div');wrap.style.cssText='position:relative;background:#fff;box-shadow:0 2px 10px rgba(0,0,0,.08);width:'+vp.width+'px;height:'+vp.height+'px;flex:none';
+    var cv=document.createElement('canvas');cv.width=vp.width*dpr;cv.height=vp.height*dpr;cv.style.width=vp.width+'px';cv.style.height=vp.height+'px';wrap.appendChild(cv);
+    await pg.render({canvasContext:cv.getContext('2d'),viewport:pg.getViewport({scale:esc1*dpr})}).promise;
+    if(meu!==_rotRender)return;
+    var an=await pg.getAnnotations();
+    an.forEach(function(a){
+      if(a.subtype!=='Link')return;
+      var r=vp.convertToViewportRectangle(a.rect),x=Math.min(r[0],r[2]),y=Math.min(r[1],r[3]),w=Math.abs(r[0]-r[2]),h=Math.abs(r[1]-r[3]);
+      var el=document.createElement('a');el.style.cssText='position:absolute;left:'+x+'px;top:'+y+'px;width:'+w+'px;height:'+h+'px;border-radius:3px';
+      el.onmouseenter=function(){el.style.background='rgba(15,110,98,.15)';};el.onmouseleave=function(){el.style.background='';};
+      if(a.url){el.href=a.url;el.target='_blank';el.rel='noopener';el.title=a.url;}
+      else if(a.dest){el.href='#';el.onclick=async function(ev){ev.preventDefault();try{var d=typeof a.dest==='string'?await doc.getDestination(a.dest):a.dest;var idx=typeof d[0]==='object'?await doc.getPageIndex(d[0]):d[0];rotIr(idx+1);}catch(e){}};}
+      else return;
+      wrap.appendChild(el);
+    });
+    box.innerHTML='';box.appendChild(wrap);
+  }catch(e){box.innerHTML='<div class="note">'+esc(e.message)+'</div>';}
+}
+async function rotMudancas(v){
+  var el=$('rot-diff');if(!el)return;
+  var ant=rotAnterior(v);
+  if(!ant){el.innerHTML='<span style="font-size:13px;color:var(--muted);line-height:1.5">Esta é a primeira versão deste roteiro. Quando você subir o próximo mês, as mudanças aparecem aqui.</span>';return;}
+  try{
+    var a=await rotPaginas(ant),b=await rotPaginas(v);if(!$('rot-diff'))return;
+    var bl=rotDiff(rotLinhas(a),rotLinhas(b));
+    if(bl===null){el.innerHTML='<span style="font-size:13px;color:var(--muted)">Mudanças demais para comparar automaticamente.</span>';return;}
+    if(!bl.length){el.innerHTML='<span style="font-size:13px;color:var(--muted)">Nenhuma mudança de texto em relação a '+mesNome(ant.mes)+'.</span>';return;}
+    el.innerHTML='<span style="font-size:12px;color:var(--muted)">'+bl.length+' trecho'+(bl.length>1?'s':'')+' em relação a '+mesNome(ant.mes)+'</span>'+bl.slice(0,80).map(function(x){
+      return '<button onclick="rotIr('+x.p+')" style="text-align:left;border:1px solid var(--line2);background:#fff;border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.45">'+
+       '<b style="font-size:12.5px">'+esc(rotSecao(v,x.p))+' <span style="font-weight:600;color:var(--muted)">· p. '+x.p+'</span></b>'+
+       x.rem.slice(0,4).map(function(s){return '<span style="background:#FBE4E4;color:#7A1F1F;border-radius:6px;padding:3px 6px;text-decoration:line-through">'+esc(s)+'</span>';}).join('')+
+       x.add.slice(0,4).map(function(s){return '<span style="background:#DDF3EC;color:#0B5C4A;border-radius:6px;padding:3px 6px">'+esc(s)+'</span>';}).join('')+
+       (x.rem.length+x.add.length>8?'<span style="color:var(--muted)">...</span>':'')+'</button>';}).join('');
+  }catch(e){el.innerHTML='<span style="font-size:13px;color:var(--muted)">'+esc(e.message)+'</span>';}
+}
 
 /* ====== SIMULADOR ====== */
 var SM={mod:'cs',cv:'890590',av:'887000',disp:'437121.01',tar:'550',fin:'400000',decl:'420000',saldo:'468075.77',iq:true,boleto:'210000',tot:false,dif:'fin'};
@@ -516,6 +733,8 @@ function buscar(q){
     [['port','Portabilidade'],['cert','Certificação'],['fgts','FGTS']].forEach(function(x){I[x[0]].forEach(function(s){add(x[0],null,s,x[1]);});});
     I.iqIni.concat(I.iqFim).forEach(function(s){add('iq',null,s,'IQ');});
     Object.keys(I.iqPaths).forEach(function(k){I.iqPaths[k].steps.forEach(function(s){add('iq',k,s,'IQ · '+I.iqPaths[k].n);});});}
+  ['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(!v||!ROT_PAG[v.id])return;var qq=semAc(q).trim();
+    ROT_PAG[v.id].forEach(function(txt,i){var a=semAc(txt),k=a.indexOf(qq);if(k>=0){var ini=Math.max(0,k-40);hits.push({g:'Roteiro · '+(tp==='fin'?'Financiamento':'Consórcio')+' · p. '+(i+1),t:rotSecao(v,i+1),s:txt.slice(ini,k+qq.length+90),go:function(){RT.r=tp;RT.pag=i+1;RT.q=q;ir('rot');}});}});});
   CONS_TOP.forEach(function(t,i){if(casa(t.t+' '+t.ideia+' '+t.pts.join(' '),q))hits.push({g:'Consórcio',t:t.t,s:t.ideia,go:function(){CS.i=i;ir('cons');}});});
   CERTS.forEach(function(c){if(casa(c.t+' '+c.como.join(' ')+' '+c.melhor.join(' ')+' '+c.contra,q))hits.push({g:'Certificados',t:c.t,s:c.melhor.join(' · '),go:function(){ir('cert');}});});
   window._hits=hits.slice(0,30);
@@ -526,6 +745,7 @@ function abrirHit(i){var h=window._hits[i];$('results').classList.add('hide');$(
 $('q-geral').oninput=function(){buscar(this.value);};
 $('q-geral').onkeydown=function(e){if(e.key==='Escape'){this.value='';$('results').classList.add('hide');}};
 document.addEventListener('click',function(e){if(!e.target.closest('.search-top'))$('results').classList.add('hide');});
+function fecharModal(){var r=document.getElementById('modal-root');if(r)r.innerHTML='';}
 document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){e.preventDefault();$('q-geral').focus();}if(e.key==='Escape')fecharModal();});
 
 /* ====== INÍCIO ====== */
@@ -534,7 +754,7 @@ async function iniciar(){
   $('view').innerHTML='<div class="note">Carregando...</div>';
   try{atual=localStorage.getItem('bancada_mod')||'pend';}catch(e){}
   renderNav();
-  try{await carregar();render();}
+  try{await carregar();render();rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
   catch(e){if(/sessão|sem sessão/.test(e.message)){sair();return;}$('view').innerHTML='<div class="note">Não consegui carregar os dados: '+esc(e.message)+'</div>';}
 }
 (function(){sessao=lerSessao();if(sessao)iniciar();else mostrarLogin();})();
