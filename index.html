@@ -197,6 +197,7 @@ async function carregar(){
 var ICON={
  pend:'<path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/><path d="M9 13h6M9 17h4"/>',
  rot:'<path d="M3 19a9 9 0 0 1 9 0a9 9 0 0 1 9 0"/><path d="M3 6a9 9 0 0 1 9 0a9 9 0 0 1 9 0"/><path d="M3 6v13M12 6v13M21 6v13"/>',
+ link:'<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
  sim:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 11h2M14 11h2M8 15h2M14 15h2"/>',
  cons:'<circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/>',
  cert:'<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 9h3M15 13h3M7 15h4"/>',
@@ -204,13 +205,13 @@ var ICON={
  nota:'<path d="M5 4h14v16l-4-3H5z"/><path d="M9 9h6M9 12h4"/>',
  int:'<path d="M7 10h10M7 14h6"/><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-6l-4 3v-3H6a2 2 0 0 1-2-2z"/>'
 };
-var MODS=[['pend','Pendências'],['rot','Roteiros'],['sim','Simulador FGTS'],['cons','Consórcio'],['cert','Certificados'],['ia','Assistente'],['int','Intermediação'],['nota','Notas']];
+var MODS=[['pend','Pendências'],['rot','Roteiros'],['link','Links'],['sim','Simulador FGTS'],['cons','Consórcio'],['cert','Certificados'],['ia','Assistente'],['int','Intermediação'],['nota','Notas']];
 var atual='pend';
 function renderNav(){
   $('nav-list').innerHTML=MODS.map(function(m){return '<button class="nav-a'+(m[0]===atual?' on':'')+'" onclick="ir(\''+m[0]+'\')"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+ICON[m[0]]+'</svg>'+m[1]+(m[0]==='nota'&&notasPend()?'<span style="margin-left:auto;font-size:11px;font-weight:800;background:#FDEBD3;color:#8A4B00;border-radius:999px;padding:1px 8px">'+notasPend()+'</span>':'')+'</button>';}).join('');
 }
 function ir(m){atual=m;try{localStorage.setItem('bancada_mod',m);}catch(e){}renderNav();render();window.scrollTo(0,0);}
-function render(){({pend:vPend,rot:vRot,sim:vSim,cons:vCons,cert:vCert,ia:vIA,int:vInt,nota:vNotas})[atual]();}
+function render(){({pend:vPend,rot:vRot,link:vLinks,sim:vSim,cons:vCons,cert:vCert,ia:vIA,int:vInt,nota:vNotas})[atual]();}
 function cab(t,sub,dir){return '<div class="head"><div><h1>'+t+'</h1><p>'+sub+'</p></div>'+(dir||'')+'</div>';}
 function segHtml(lista,ativo,fn){return '<div class="seg">'+lista.map(function(b){return '<button class="'+(b[0]===ativo?'on':'')+'" onclick="'+fn+'(\''+b[0]+'\')">'+b[1]+'</button>';}).join('')+'</div>';}
 
@@ -274,7 +275,7 @@ function pdSaida(){
 }
 function pdCopiar(btn){var t=pdTexto();copiar(limparCopia([t.h,t.b,t.f].filter(Boolean).join('\n\n')),btn);}
 /* ====== ROTEIROS (PDF) ====== */
-var RT={r:'fin',ver:{fin:null,cs:null},pag:1,q:'',docs:{},carregado:false,lendo:'',zoom:1,aberto:-1};
+var RT={r:'fin',ver:{fin:null,cs:null},pag:1,q:'',docs:{},carregado:false,lendo:'',zoom:1,aberto:-1,lado:'ind'};
 var ROT=[];            // versões (sem o texto das páginas)
 var ROT_PAG={};        // id -> array de textos por página
 async function pdfLib(){
@@ -408,26 +409,20 @@ async function vRot(){
   var dir='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'+segHtml([['fin','Financiamento'],['cs','Consórcio']],RT.r,'rtSet')+
     (vers.length>1?'<select class="inp" style="width:auto;padding:9px 14px" onchange="RT.ver[RT.r]=+this.value;RT.pag=1;vRot()">'+vers.map(function(x){return '<option value="'+x.id+'"'+(x.id===RT.ver[RT.r]?' selected':'')+'>'+mesNome(x.mes)+'</option>';}).join('')+'</select>':'')+
     '<button class="btn2" onclick="rotSubirModal()">Subir roteiro do mês</button></div>';
-  var L=(D.linksRot&&D.linksRot[RT.r])||[];
-  var lk='text-decoration:none;font-weight:700;font-size:14px;color:#1F2A40';
-  var item=function(l){
-    if(l.links)return '<div style="background:var(--soft);border-radius:14px;padding:10px 14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between"><b style="font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="display:flex;gap:6px;flex-wrap:wrap">'+l.links.map(function(x){return '<a class="btn2 btn-sm" style="text-decoration:none" href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.rot)+'</a>';}).join('')+'</span></div>';
-    return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="background:var(--soft);border-radius:14px;padding:10px 14px;display:block;'+lk+'">'+esc(l.n)+'</a>';
-  };
-  var linksBox='<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">Links rápidos</b>'+(L.length?L.map(item).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link.</span>')+'</section>';
   if(!v){
     $('view').innerHTML=cab('Roteiros','O PDF do mês, com índice, busca e o que mudou.',dir)+
      '<div class="row" style="margin-top:16px"><section class="card" style="flex:2 1 420px;line-height:1.6"><b style="font-size:18px">Nenhum roteiro de '+(RT.r==='fin'?'financiamento':'consórcio')+' ainda</b><p style="color:var(--muted)">Clique em "Subir roteiro do mês" e escolha o PDF. A Bancada guarda o arquivo no armazenamento privado e lê o índice, os links e o texto de cada página.</p></section>'+
-     '<div style="flex:1 1 280px;max-width:360px">'+linksBox+'</div></div>';
+     '</div>';
     return;
   }
   if(RT.pag>v.paginas_total)RT.pag=1;
   $('view').innerHTML=cab('Roteiros',(RT.r==='fin'?'Financiamento':'Consórcio')+' · '+mesNome(v.mes)+' · '+v.paginas_total+' páginas',dir)+
    '<div class="row" style="margin-top:16px;align-items:flex-start">'+
-   '<section class="card" style="flex:1 1 240px;max-width:300px;padding:16px 10px;display:flex;flex-direction:column;gap:8px">'+
-     '<input class="inp" type="search" id="rot-q" placeholder="Buscar no roteiro..." value="'+esc(RT.q)+'" oninput="RT.q=this.value;rotLateral()">'+
-     '<div id="rot-lat" style="display:flex;flex-direction:column;gap:2px;max-height:680px;overflow-y:auto"></div></section>'+
-   '<section class="card" style="flex:2 1 460px;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px">'+
+   '<section class="card" style="flex:1 1 240px;max-width:320px;padding:16px 10px;display:flex;flex-direction:column;gap:8px;position:sticky;top:16px">'+
+     '<div class="seg" style="align-self:stretch;display:flex"><button style="flex:1" class="'+(RT.lado!=='mud'?'on':'')+'" onclick="RT.lado=\'ind\';vRot()">Índice</button><button style="flex:1" class="'+(RT.lado==='mud'?'on':'')+'" onclick="RT.lado=\'mud\';vRot()">O que mudou</button></div>'+
+     (RT.lado!=='mud'?'<input class="inp" type="search" id="rot-q" placeholder="Buscar no roteiro..." value="'+esc(RT.q)+'" oninput="RT.q=this.value;rotLateral()">':'')+
+     '<div id="rot-lat" style="display:flex;flex-direction:column;gap:'+(RT.lado==='mud'?'8':'2')+'px;max-height:calc(100vh - 200px);overflow-y:auto"></div></section>'+
+   '<section class="card" style="flex:4 1 520px;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px">'+
      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
        '<div style="display:flex;gap:6px;align-items:center"><button class="btn2 btn-sm" onclick="rotIr(RT.pag-1)" aria-label="Página anterior">‹</button>'+
        '<span style="font-size:14px;font-weight:700">página <input type="number" min="1" max="'+v.paginas_total+'" value="'+RT.pag+'" style="width:56px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;text-align:center" onchange="rotIr(+this.value)"> de '+v.paginas_total+'</span>'+
@@ -435,15 +430,13 @@ async function vRot(){
        '<div style="display:flex;gap:6px"><button class="btn2 btn-sm" onclick="RT.zoom=Math.max(.6,RT.zoom-.2);rotDesenhar()" aria-label="Diminuir">−</button><button class="btn2 btn-sm" onclick="RT.zoom=Math.min(2.4,RT.zoom+.2);rotDesenhar()" aria-label="Aumentar">+</button></div></div>'+
      '<div id="rot-sec" style="font-size:13px;color:var(--muted);font-weight:700"></div>'+
      '<div id="rot-pag" style="background:#EDEBE6;border-radius:14px;padding:12px;overflow:auto;min-height:500px;display:flex;justify-content:center"><div class="note">Abrindo o PDF...</div></div></section>'+
-   '<div style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:16px">'+
-     '<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:16px">O que mudou</b><div id="rot-diff" style="display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto"><span style="font-size:13px;color:var(--muted)">Comparando...</span></div></section>'+
-     linksBox+'</div></div>';
-  rotLateral();rotDesenhar();rotMudancas(v);
+   '</div>';
+  if(RT.lado==='mud')rotMudancas(v);else rotLateral();rotDesenhar();
 }
 function rtSet(r){RT.r=r;RT.pag=1;RT.q='';vRot();}
 function rotIr(p){var v=rotAtual();if(!v)return;p=Math.max(1,Math.min(v.paginas_total,p||1));RT.pag=p;rotDesenhar();var i=document.querySelector('#rot-pag');if(i)i.scrollTop=0;}
 async function rotLateral(){
-  var v=rotAtual(),el=$('rot-lat');if(!v||!el)return;
+  var v=rotAtual(),el=$('rot-lat');if(!v||!el||RT.lado==='mud')return;
   var q=semAc(RT.q).trim();
   if(q.length<2){
     var ind=v.indice||[],sec=[],cur=null;
@@ -489,11 +482,11 @@ async function rotDesenhar(){
   }catch(e){box.innerHTML='<div class="note">'+esc(e.message)+'</div>';}
 }
 async function rotMudancas(v){
-  var el=$('rot-diff');if(!el)return;
+  var el=$('rot-lat');if(!el)return;
   var ant=rotAnterior(v);
   if(!ant){el.innerHTML='<span style="font-size:13px;color:var(--muted);line-height:1.5">Esta é a primeira versão deste roteiro. Quando você subir o próximo mês, as mudanças aparecem aqui.</span>';return;}
   try{
-    var a=await rotPaginas(ant),b=await rotPaginas(v);if(!$('rot-diff'))return;
+    var a=await rotPaginas(ant),b=await rotPaginas(v);if(!$('rot-lat')||RT.lado!=='mud')return;
     var bl=rotDiff(rotLinhas(a),rotLinhas(b));
     if(bl===null){el.innerHTML='<span style="font-size:13px;color:var(--muted)">Mudanças demais para comparar automaticamente.</span>';return;}
     if(!bl.length){el.innerHTML='<span style="font-size:13px;color:var(--muted)">Nenhuma mudança de texto em relação a '+mesNome(ant.mes)+'.</span>';return;}
@@ -504,6 +497,28 @@ async function rotMudancas(v){
        x.add.slice(0,4).map(function(s){return '<span style="background:#DDF3EC;color:#0B5C4A;border-radius:6px;padding:3px 6px">'+esc(s)+'</span>';}).join('')+
        (x.rem.length+x.add.length>8?'<span style="color:var(--muted)">...</span>':'')+'</button>';}).join('');
   }catch(e){el.innerHTML='<span style="font-size:13px;color:var(--muted)">'+esc(e.message)+'</span>';}
+}
+
+/* ====== LINKS ====== */
+var LK={q:''};
+function linksTodos(){
+  var L=D.linksRot||{},vistos={},out=[];
+  (L.fin||[]).concat(L.cs||[]).forEach(function(l){var k=semAc(l.n).trim();if(vistos[k])return;vistos[k]=1;out.push(l);});
+  return out.sort(function(a,b){return a.n.localeCompare(b.n,'pt-BR');});
+}
+function vLinks(){
+  var h=cab('Links','Os sites que os roteiros usam, num lugar só.');
+  h+='<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px"><input class="inp" type="search" id="lk-q" placeholder="Filtrar links..." value="'+esc(LK.q)+'" oninput="LK.q=this.value;lkLista()"><div id="lk-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px"></div></section>';
+  $('view').innerHTML=h;lkLista();
+}
+function lkLista(){
+  var el=$('lk-lista');if(!el)return;
+  var L=linksTodos().filter(function(l){return !LK.q.trim()||casa(l.n,LK.q);});
+  var base='background:var(--soft);border-radius:14px;padding:12px 14px;';
+  el.innerHTML=L.length?L.map(function(l){
+    if(l.links)return '<div style="'+base+'display:flex;flex-direction:column;gap:8px"><b style="font-size:14px;color:#1F2A40">'+esc(l.n)+'</b><span style="display:flex;gap:6px;flex-wrap:wrap">'+l.links.map(function(x){return '<a class="btn2 btn-sm" style="text-decoration:none" href="'+esc(x.u)+'" target="_blank" rel="noopener">'+esc(x.rot)+' ↗</a>';}).join('')+'</span></div>';
+    return '<a href="'+esc(l.u)+'" target="_blank" rel="noopener" style="'+base+'display:flex;justify-content:space-between;align-items:center;gap:8px;text-decoration:none;font-weight:700;font-size:14px;color:#1F2A40"><span>'+esc(l.n)+'</span><span style="color:var(--muted)">↗</span></a>';
+  }).join(''):'<span style="color:var(--muted);font-size:14px">Nenhum link.</span>';
 }
 
 /* ====== SIMULADOR ====== */
@@ -735,6 +750,7 @@ function buscar(q){
     Object.keys(I.iqPaths).forEach(function(k){I.iqPaths[k].steps.forEach(function(s){add('iq',k,s,'IQ · '+I.iqPaths[k].n);});});}
   ['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(!v||!ROT_PAG[v.id])return;var qq=semAc(q).trim();
     ROT_PAG[v.id].forEach(function(txt,i){var a=semAc(txt),k=a.indexOf(qq);if(k>=0){var ini=Math.max(0,k-40);hits.push({g:'Roteiro · '+(tp==='fin'?'Financiamento':'Consórcio')+' · p. '+(i+1),t:rotSecao(v,i+1),s:txt.slice(ini,k+qq.length+90),go:function(){RT.r=tp;RT.pag=i+1;RT.q=q;ir('rot');}});}});});
+  linksTodos().forEach(function(l){if(casa(l.n,q))hits.push({g:'Links',t:l.n,s:l.links?l.links.map(function(x){return x.rot;}).join(' · '):l.u,go:function(){LK.q=l.n;ir('link');}});});
   CONS_TOP.forEach(function(t,i){if(casa(t.t+' '+t.ideia+' '+t.pts.join(' '),q))hits.push({g:'Consórcio',t:t.t,s:t.ideia,go:function(){CS.i=i;ir('cons');}});});
   CERTS.forEach(function(c){if(casa(c.t+' '+c.como.join(' ')+' '+c.melhor.join(' ')+' '+c.contra,q))hits.push({g:'Certificados',t:c.t,s:c.melhor.join(' · '),go:function(){ir('cert');}});});
   window._hits=hits.slice(0,30);
