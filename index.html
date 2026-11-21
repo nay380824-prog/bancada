@@ -710,11 +710,19 @@ async function dvRemover(id,nome){if(!confirm('Remover "'+nome+'" da base?'))ret
 function dvSubirModal(){
   $('modal-root').innerHTML='<div class="ov" onclick="if(event.target===this&&!DV.enviando)fecharModal()"><div class="modal" role="dialog" aria-label="Adicionar lei ou manual">'+
    '<b style="font-size:20px">Adicionar lei ou manual</b>'+
-   '<label class="fld"><span>Arquivo (PDF, TXT ou HTML)</span><input class="inp" type="file" id="f-arq" accept=".pdf,.txt,.htm,.html" onchange="var n=this.files[0];if(n&&!$(\'f-nome\').value)$(\'f-nome\').value=n.name.replace(/\\.[^.]+$/,\'\').replace(/[_]+/g,\' \')"></label>'+
+   '<label class="fld"><span>Arquivo (PDF, TXT, MD ou HTML)</span><input class="inp" type="file" id="f-arq" accept=".pdf,.txt,.md,.htm,.html" onchange="dvEscolheu(this.files[0])"></label>'+
+   '<label class="fld"><span>Tipo</span><select class="inp" id="f-tipo"><option value="lei">Lei ou norma (divide por artigo)</option><option value="texto">Manual ou livro (divide em trechos)</option></select></label>'+
    '<label class="fld"><span>Nome que aparece nas respostas</span><input class="inp" id="f-nome" placeholder="Ex.: Lei 9.514/1997"></label>'+
-   '<div style="font-size:13px;color:var(--muted);line-height:1.5" id="f-status">Lei é dividida por artigo. Manual é dividido em trechos por página. Se já existir uma fonte com o mesmo nome, ela é substituída.</div>'+
+   '<div style="font-size:13px;color:var(--muted);line-height:1.5" id="f-status">Livros de doutrina: comece o nome com "Doutrina -" para a IA usar só como apoio de interpretação. Se já existir uma fonte com o mesmo nome, ela é substituída.</div>'+
    '<div class="err" id="f-err"></div>'+
    '<div style="display:flex;gap:8px;justify-content:flex-end"><button class="btn2" onclick="fecharModal()">Cancelar</button><button class="btn" id="f-btn" onclick="dvSubir()">Adicionar</button></div></div></div>';
+}
+function dvEscolheu(n){
+  if(!n)return;
+  var nm=n.name.replace(/\.[^.]+$/,'').replace(/[_]+/g,' ');
+  $('f-nome').value=nm;
+  var lei=/(\blei\b|^l\d|resolu|decreto|provimento|\bcpc\b|c[óo]digo|\bbcb\b|\bcmn\b|\bmp\b|medida provis|^\d{3,4}-\d)/i.test(nm)&&!/^(manual|doutrina)/i.test(nm)&&!/\.md$/i.test(n.name);
+  $('f-tipo').value=lei?'lei':'texto';
 }
 function dvStatus(t){var e=$('f-status');if(e)e.textContent=t;}
 function dvDecod(buf){
@@ -729,19 +737,21 @@ async function dvLer(file){
       dvStatus('Lendo página '+n+' de '+doc.numPages+'...');
       var tc=await (await doc.getPage(n)).getTextContent(),s='';
       tc.items.forEach(function(x){s+=x.str+(x.hasEOL?'\n':' ');});
-      blocos.push({p:n,t:s.replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')});
+      blocos.push({p:n,t:s.replace(/[\ue000-\uf8ff]/g,'').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')});
     }
     return blocos;
   }
   var txt=dvDecod(await file.arrayBuffer());
   if(/\.html?$/.test(nm)){
     var d=new DOMParser().parseFromString(txt,'text/html');
-    d.querySelectorAll('script,style,strike,s,del').forEach(function(e){e.remove();});
+    d.querySelectorAll('script,style,strike,s,del,header,nav').forEach(function(e){e.remove();});
+    d.querySelectorAll('[style]').forEach(function(e){if(/line-through/i.test(e.getAttribute('style')))e.remove();});
+    var tn=d.querySelector('.textoNorma');if(tn){d.body.innerHTML='';d.body.appendChild(tn);}
     d.querySelectorAll('br').forEach(function(e){e.replaceWith('\n');});
     d.querySelectorAll('p,div,li,h1,h2,h3,h4,h5,h6,tr,blockquote,table').forEach(function(e){e.append('\n');});
     txt=(d.body||d.documentElement).textContent;
   }
-  return [{p:null,t:txt.replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')}];
+  return [{p:null,md:/\.md$/.test(nm),t:txt.replace(/[\ue000-\uf8ff]/g,'').replace(/\u00a0/g,' ').replace(/[ \t]+/g,' ').replace(/ *\n */g,'\n')}];
 }
 function dvPartir(t,max){
   var out=[],cur='';
@@ -749,11 +759,11 @@ function dvPartir(t,max){
   if(cur.trim())out.push(cur.trim());
   return out;
 }
-function dvTrechos(blocos){
-  var tudo=blocos.map(function(b){return b.t;}).join('\n'),rx=/^[ \t]*Art\.?[ \t]*(\d[\d.]*)[ \t]*(º|°|o)?((-[A-Z])?)/gm,pos=[],m;
+function dvTrechos(blocos,tipo){
+  var tudo=blocos.map(function(b){return b.t;}).join('\n'),rx=/^[^\S\n]*Art\.?[^\S\n]*(\d[\d.]*)[^\S\n]*(º|°|o)?((-[A-Z]{1,3})?)/gm,pos=[],m;
   while((m=rx.exec(tudo)))pos.push({i:m.index,ref:'Art. '+m[1].replace(/\.$/,'')+(m[2]||(+m[1].replace(/\./g,'')<10?'º':''))+(m[3]||'')});
   var out=[];
-  if(pos.length>=5){
+  if(tipo==='lei'&&pos.length){
     var pre=tudo.slice(0,pos[0].i).trim();
     if(pre)dvPartir(pre,2000).forEach(function(x){out.push({ref:'Ementa',texto:x});});
     pos.forEach(function(p,k){
@@ -762,7 +772,14 @@ function dvTrechos(blocos){
       partes.forEach(function(x,j){out.push({ref:p.ref+(partes.length>1?' (parte '+(j+1)+')':''),texto:x});});
     });
   } else {
-    blocos.forEach(function(b,k){dvPartir(b.t,1300).forEach(function(x,j){if(x.length>40)out.push({ref:b.p?'p. '+b.p:'parte '+(out.length+1),texto:x});});});
+    blocos.forEach(function(b){if(!b.md)return;var ref='',cur=[];
+      var solta=function(){var t=cur.join('\n').trim();cur=[];if(t.length>40)dvPartir(t,1300).forEach(function(x){out.push({ref:ref||'Início',texto:x});});};
+      b.t.split('\n').forEach(function(l){var m=l.match(/^(#{1,3})\s+(.*)/);if(m){solta();ref=m[2].replace(/^\[|\]$/g,'').slice(0,90);}else if(/^#{4,}\s/.test(l)){solta();}else cur.push(l);});solta();});
+    var item='';
+    blocos.forEach(function(b){if(b.md)return;dvPartir(b.t,1300).forEach(function(x){
+      var ini=item,ms=x.match(/^\d+(\.\d+){1,5}\.?(?= +\S)/gm);
+      if(ms){var bom=ms.filter(function(m){return !/\.{5,}/.test(x);});if(bom.length){ini=ini||bom[0];item=bom[bom.length-1];}}
+      if(x.length>40)out.push({ref:(ini?'item '+ini.replace(/\.$/,''):'')+(b.p?(ini?' · ':'')+'p. '+b.p:'')||('parte '+(out.length+1)),texto:x});});});
   }
   return out;
 }
@@ -772,7 +789,8 @@ async function dvSubir(){
   if(!nome){$('f-err').textContent='Dê um nome para a fonte.';return;}
   DV.enviando=true;$('f-btn').disabled=true;
   try{
-    var tr=dvTrechos(await dvLer(f));
+    var tr=dvTrechos(await dvLer(f),$('f-tipo').value);
+    if(!tr.length&&$('f-tipo').value==='lei')throw new Error('Não encontrei artigos (Art. 1º...). Se for manual ou livro, troque o Tipo.');
     if(!tr.length)throw new Error('Não encontrei texto no arquivo. Se for PDF escaneado (imagem), ele não tem texto para ler.');
     dvStatus('Salvando '+tr.length+' trechos...');
     var ant=await db('fontes?select=id&nome=eq.'+encodeURIComponent(nome));
