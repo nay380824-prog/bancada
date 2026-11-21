@@ -15,6 +15,11 @@ button{cursor:pointer}
 a{color:var(--accent)}
 mark{background:#FFE89A;color:#3A2E00;border-radius:4px;padding:0 3px;font-weight:700}
 .hide{display:none!important}
+body.cel nav,body.cel .search-top{display:none!important}
+body.cel #app{padding:14px}
+body.cel main{flex:1 1 100%}
+.so-cel{display:none}
+@media(max-width:760px){.so-cel{display:block}}
 /* login */
 #login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .login-box{background:#fff;border:1px solid var(--line);border-radius:24px;padding:32px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:14px}
@@ -120,7 +125,7 @@ abbr{text-decoration:underline dotted var(--teal);text-underline-offset:3px;colo
   <nav aria-label="Módulos">
     <div class="brand"><div class="logo">B</div>Bancada</div>
     <div id="nav-list"></div>
-    <div class="nav-foot" style="justify-content:flex-end"><button class="btn2 btn-sm" onclick="sair()">Sair</button></div>
+    <div class="nav-foot" style="justify-content:flex-end"><button class="btn2 btn-sm" onclick="sair()">Sair</button></div><button class="btn2 btn-sm so-cel" onclick="modoCelular(true)" style="margin-top:6px">Voltar pra versão do celular</button>
   </nav>
   <main>
     <div class="search-top">
@@ -631,22 +636,35 @@ function vCert(){
 }
 
 /* ====== ASSISTENTE (ponte com o celular, sem API) ====== */
-var IA={modo:'txt',destino:'email',texto:'',res:null,carregando:false,erro:'',pend:null};
+var IA={modo:'txt',destino:'email',forma:'txt',texto:'',res:null,carregando:false,erro:'',pend:null};
 var IA_BLOQ=[[/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/,'CPF'],[/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/,'CNPJ'],[/[\w.+-]+@[\w-]+\.[\w.-]+/,'e-mail'],[/(\(?\b\d{2}\)?\s?)?\b9?\d{4}-?\d{4}\b/,'telefone'],[/matr[ií]cula\s*(n[º°o.]*\s*)?\d/i,'número de matrícula']];
 function iaBloqueio(t){for(var i=0;i<IA_BLOQ.length;i++)if(IA_BLOQ[i][0].test(t))return IA_BLOQ[i][1];return null;}
 var DESTINOS={
-  email:'um e-mail profissional para cliente ou parceiro: cordial, claro, com saudação e fechamento curtos',
-  whatsapp:'uma mensagem de WhatsApp: curta, educada e direta, sem formalidade excessiva, em parágrafos curtos',
-  pendencia:'uma pendência formal de análise de operação: objetiva e impessoal, dizendo exatamente qual documento ou ajuste é necessário e por quê'
+  email:'E-mail formal. Linguagem cordial e profissional, frases completas, com saudação e fechamento adequados. Se o texto for longo, organize em parágrafos com uma ideia por parágrafo e, quando ajudar, liste os itens (documentos, passos) em linhas separadas.',
+  whatsapp:'Mensagem de WhatsApp para cliente. Curta, direta e educada: só o essencial, em frases curtas e no máximo 3 ou 4 parágrafos pequenos. Nada de tom de carta, nada de "Prezado", nada de despedida longa. Destaque as palavras-chave (nome do documento, prazo, ação que o cliente precisa fazer) entre asteriscos simples, assim: *certidão de casamento*, porque no WhatsApp isso vira negrito. Use no máximo 3 ou 4 destaques.',
+  pendencia:'Pendência formal de análise de operação. Objetiva e impessoal, dizendo exatamente qual documento ou ajuste é necessário e por quê. Se houver mais de um item, um por linha.'
 };
 function promptTexto(t,dest){
-  return 'Melhore o rascunho abaixo para '+DESTINOS[dest]+'.\n\n'+
-    'Regras:\n- Mantenha o sentido e todas as informações. Não invente prazos, valores, documentos ou regras.\n'+
-    '- Mantenha exatamente como estão os campos entre colchetes, como [NOME] e [CPF].\n'+
+  var p=dest.split(':'),d=p[0],sit=p[1]==='sit';
+  var prez=/^\s*prezad[oa]s?\b/i.test(t);
+  var r='Tipo de mensagem: '+DESTINOS[d]+'\n\n';
+  if(sit){
+    r+='Abaixo eu explico a situação: o que o cliente (ou a pessoa) mandou e o que eu quero responder. Escreva a mensagem que eu devo enviar.\n\nRegras:\n'+
+      '- Escreva só a mensagem final, pronta para enviar, falando diretamente com a pessoa. Não explique a situação de volta para mim.\n'+
+      '- Responda ao que a pessoa mandou e passe o que eu quero explicar, com clareza. Não acrescente informações, prazos, documentos ou regras que eu não citei.\n'+
+      (d==='whatsapp'?'- Atenção ao tamanho: é WhatsApp. Se ficar parecendo carta, está errado. Corte tudo o que não for essencial.\n':'');
+  } else {
+    r+='Melhore o rascunho abaixo.\n\nRegras:\n'+
+      '- O objetivo é deixar o texto realmente mais claro e bem escrito. Pode reescrever frases inteiras, reorganizar a ordem das informações e '+(d==='whatsapp'?'cortar o que sobra.':'aumentar o tamanho se isso deixar a mensagem mais clara.')+' Não se limite a trocar algumas palavras por sinônimos.\n'+
+      '- Mantenha o sentido e todas as informações. Não invente prazos, valores, documentos ou regras.\n';
+  }
+  if(prez)r+='- O rascunho começa com "Prezados": é uma mensagem para colegas de trabalho de outra área do banco. Mantenha formal, mas suavize o tom: cordial, colaborativo, sem soar como cobrança ou ordem.\n';
+  r+='- Mantenha exatamente como estão os campos entre colchetes, como [NOME] e [CPF].\n'+
     '- Português do Brasil, correto e natural.\n'+
-    '- Responda em texto simples, sem markdown (sem asteriscos, sem #), porque vou colar em outro sistema.\n\n'+
-    'Formato da resposta:\n1) Só o texto revisado, pronto para copiar.\n2) Depois, numa linha sozinha: ---MUDANÇAS---\n3) Abaixo, em até 4 linhas curtas, o que você mudou.\n\n'+
-    'Rascunho:\n"""\n'+t+'\n"""';
+    '- Não use markdown (sem **, sem #)'+(d==='whatsapp'?'; o único destaque permitido é o asterisco simples do WhatsApp.':'.')+' Vou colar em outro sistema.\n\n'+
+    'Formato da resposta:\n1) Só a mensagem, pronta para copiar.\n2) Depois, numa linha sozinha: ---MUDANÇAS---\n3) Abaixo, em até 4 linhas curtas, '+(sit?'o que você considerou ao montar a resposta.':'o que você mudou e por quê.')+'\n\n'+
+    (sit?'Situação:\n':'Rascunho:\n')+'"""\n'+t+'\n"""';
+  return r;
 }
 function promptDuvida(q,tr){
   var s='Trabalho como assistente num banco, em operações de financiamento imobiliário e de intermediação de consórcio. Tenho uma dúvida de trabalho.\n\nDúvida:\n"""\n'+q+'\n"""\n\n';
@@ -660,8 +678,8 @@ function promptDuvida(q,tr){
     'Formato:\nVeredito: (uma ou duas frases)\nFundamento: (por quê, citando os trechos)\nO que pedir ou conferir: (lista curta)';
   return s;
 }
-function limparMd(t){
-  return String(t||'').replace(/\r/g,'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/__(.+?)__/g,'$1')
+function limparMd(t,wa){
+  return String(t||'').replace(/\r/g,'').replace(/\*\*(.+?)\*\*/g,wa?'*$1*':'$1').replace(/__(.+?)__/g,'$1')
     .replace(/^#{1,6}\s*/gm,'').replace(/^\s*[*•]\s+/gm,'- ').replace(/`([^`]+)`/g,'$1').replace(/\n{3,}/g,'\n\n').trim();
 }
 function separarMudancas(t){
@@ -716,7 +734,7 @@ async function ponteChecar(){
     var p=PONTE[tp];if(!p)return;var r=rows.find(function(x){return x.id===p.id;});
     if(!r){PONTE[tp]=null;mudou=true;return;}
     if(!r.resposta)return;
-    var resp=limparMd(r.resposta);
+    var resp=limparMd(r.resposta,tp==='txt'&&/^whatsapp/.test(r.destino||''));
     if(tp==='txt'){IA.res=separarMudancas(resp);}
     else{
       var cit=[];resp.replace(/\[(\d+)\]/g,function(m,n){n=+n;if(cit.indexOf(n)<0)cit.push(n);});
@@ -745,12 +763,13 @@ async function iaEnviar(){
   IA.carregando=true;vIA();
   try{
     if(PONTE.txt)db('ponte?id=eq.'+PONTE.txt.id,{method:'DELETE'}).catch(function(){});
-    var r=await ponteCriar({tipo:'txt',destino:IA.destino,pergunta:IA.texto,prompt:promptTexto(IA.texto,IA.destino)});
+    var dst=IA.destino+(IA.forma==='sit'?':sit':'');var r=await ponteCriar({tipo:'txt',destino:dst,pergunta:IA.texto,prompt:promptTexto(IA.texto,dst)});
     PONTE.txt={id:r.id,prompt:r.prompt};IA.res=null;ponteGuardar();ponteVigiar();
   }catch(e){IA.erro=e.message+(/ponte/.test(e.message)?' (a tabela "ponte" já foi criada no Supabase?)':'');}
   IA.carregando=false;vIA();
 }
 function iaModo(m){if($('ia-txt'))IA.texto=$('ia-txt').value;IA.modo=m;vIA();}
+function iaForma(f){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.forma=f;vIA();}
 function iaDest(d){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.destino=d;vIA();}
 function esperandoHtml(tp){
   return '<div class="box b-info"><b style="font-size:16px">Aguardando a resposta do celular…</b>'+
@@ -780,7 +799,7 @@ async function flColar(id){
   flResponder(id,t);
 }
 async function flResponder(id,t){
-  t=limparMd(t);if(t.length<5){FL.erro='A resposta está vazia.';vIA();return;}
+  var it0=flItem(id);t=limparMd(t,it0&&it0.tipo==='txt'&&/^whatsapp/.test(it0.destino||''));if(t.length<5){FL.erro='A resposta está vazia.';vIA();return;}
   try{await db('ponte?id=eq.'+id,{method:'PATCH',body:JSON.stringify({resposta:t,respondido_em:new Date().toISOString()})});
     FL.itens=FL.itens.filter(function(x){return x.id!==id;});delete FL.manual[id];FL.erro='';FL.ok='Resposta enviada ✓ Já aparece no computador.';}
   catch(e){FL.erro='Não consegui enviar: '+e.message;}
@@ -798,7 +817,7 @@ function flHtml(){
   if(FL.erro)h+='<div class="box b-err" style="font-weight:600;font-size:14px">'+esc(FL.erro)+'</div>';
   if(!FL.itens.length)h+='<div class="note">Nada na fila. Mande uma dúvida ou um texto pelo computador e toque em Atualizar.</div>';
   FL.itens.forEach(function(it){
-    var rot=it.tipo==='duv'?'Dúvida':'Melhorar texto · '+({email:'E-mail',whatsapp:'WhatsApp',pendencia:'Pendência'}[it.destino]||'');
+    var dp=(it.destino||'').split(':'),rot=it.tipo==='duv'?'Dúvida':(dp[1]==='sit'?'Montar resposta':'Melhorar texto')+' · '+({email:'E-mail',whatsapp:'WhatsApp',pendencia:'Pendência'}[dp[0]]||'');
     var pv=it.pergunta.replace(/\s+/g,' ');if(pv.length>220)pv=pv.slice(0,220)+'…';
     var hr='';try{hr=new Date(it.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}catch(e){}
     h+='<section class="card" style="display:flex;flex-direction:column;gap:12px;padding:16px">'+
@@ -992,7 +1011,16 @@ async function dvSubir(){
     DV.enviando=false;fecharModal();dvFontes();
   }catch(e){DV.enviando=false;var b=$('f-btn');if(b)b.disabled=false;$('f-err').textContent=e.message;dvStatus('');}
 }
+var CEL=false;
+function modoCelular(on){CEL=on;document.body.classList.toggle('cel',on);try{localStorage.setItem('bancada_completa',on?'0':'1');}catch(e){}
+  if(on){atual='ia';IA.modo='fila';}else{renderNav();}
+  if($('view')&&D.textos)render();}
 function vIA(){
+  if(CEL){
+    $('view').innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><div style="display:flex;align-items:center;gap:10px"><div class="logo">B</div><div><b style="font-size:20px;display:block">Fila do celular</b><small style="color:var(--muted)">Bancada</small></div></div><button class="btn2 btn-sm" onclick="sair()">Sair</button></div>'+
+      flHtml()+'<div style="text-align:center;margin-top:24px"><button class="btn2 btn-sm" onclick="modoCelular(false)">Abrir a versão completa</button></div>';
+    return;
+  }
   var h=cab('Assistente','Monte aqui, resolva no Claude do celular e a resposta volta pra cá.',segHtml([['txt','Melhorar texto'],['duv','Tirar dúvida'],['fila','Fila do celular']],IA.modo,'iaModo'));
   if(IA.modo==='fila'){
     h+=flHtml();
@@ -1000,9 +1028,10 @@ function vIA(){
     h+=dvHtml();
   } else {
     h+='<div class="row" style="margin-top:16px;align-items:stretch">'+
-     '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Seu rascunho</b>'+
-     '<span style="font-size:13px;color:var(--muted)">Cole o texto do jeito que está. Use [NOME] no lugar de dados do cliente.</span>'+
-     '<textarea class="inp" id="ia-txt" rows="12" placeholder="Cole aqui o rascunho do e-mail ou da pendência">'+esc(IA.texto)+'</textarea>'+
+     '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">'+(IA.forma==='sit'?'A situação':'Seu rascunho')+'</b>'+
+     '<div class="seg" style="align-self:flex-start"><button class="'+(IA.forma!=='sit'?'on':'')+'" onclick="iaForma(\'txt\')">Melhorar meu texto</button><button class="'+(IA.forma==='sit'?'on':'')+'" onclick="iaForma(\'sit\')">Montar a resposta</button></div>'+
+     '<span style="font-size:13px;color:var(--muted)">'+(IA.forma==='sit'?'Explique o que a pessoa mandou e o que você quer responder. Sai só a mensagem pronta.':'Cole o texto do jeito que está. Se começar com "Prezados", ele entende que é pra colegas do banco.')+' Use [NOME] no lugar de dados do cliente.</span>'+
+     '<textarea class="inp" id="ia-txt" rows="12" placeholder="'+(IA.forma==='sit'?'Ex.: O cliente mandou a certidão de casamento sem a averbação do divórcio. Quero explicar que precisa da certidão atualizada.':'Cole aqui o rascunho do e-mail ou da pendência')+'">'+esc(IA.texto)+'</textarea>'+
      '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><b style="font-size:13px;color:var(--ink2)">Para:</b>'+
        [['email','E-mail'],['whatsapp','WhatsApp'],['pendencia','Pendência formal']].map(function(x){return '<button class="chip'+(IA.destino===x[0]?' on':'')+'" onclick="iaDest(\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div>'+
      (IA.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(IA.erro)+'</div>':'')+
@@ -1123,7 +1152,7 @@ async function iniciar(){
   $('login').classList.add('hide');$('app').classList.remove('hide');
   $('view').innerHTML='<div class="note">Carregando...</div>';
   try{atual=localStorage.getItem('bancada_mod')||'pend';}catch(e){}
-  if(window.matchMedia&&matchMedia('(max-width:760px)').matches){atual='ia';IA.modo='fila';}
+  if(window.matchMedia&&matchMedia('(max-width:760px)').matches){try{if(localStorage.getItem('bancada_completa')!=='1')modoCelular(true);}catch(e){modoCelular(true);}}
   ponteLer();ponteVigiar();
   renderNav();
   try{await carregar();render();if(DV.hist===null){DV.hist=undefined;dvHist();}rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
