@@ -660,10 +660,24 @@ async function iaEnviar(){
 function iaModo(m){IA.modo=m;vIA();}
 function iaDest(d){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.destino=d;vIA();}
 /* ---- Tirar dúvida ---- */
-var DV={q:'',res:null,carregando:false,erro:'',hist:[],fontes:null,lendo:''};
+var DV={q:'',res:null,carregando:false,erro:'',hist:null,fontes:null,lendo:'',hq:'',parecidas:[]};
+var DV_STOP=' a o e de da do das dos em no na nos nas um uma para por com sem que se ou como qual quais quando onde pode posso precisa tem ter ser foi esta este essa esse isso caso operacao '.split(' ');
+function dvPalavras(t){return semAc(t).replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(function(w){return w.length>3&&DV_STOP.indexOf(w)<0;});}
+async function dvHist(){try{DV.hist=(await db('duvidas?select=id,pergunta,resposta,trechos,criado_em&order=criado_em.desc&limit=300'))||[];}catch(e){DV.hist=[];DV.erroHist=true;}if(atual==='ia'&&IA.modo==='duv')vIA();}
+function dvParecidas(q){
+  var ws=dvPalavras(q);if(ws.length<2||!DV.hist)return [];
+  return DV.hist.map(function(h){var hw=dvPalavras(h.pergunta),n=ws.filter(function(w){return hw.some(function(x){return x.slice(0,6)===w.slice(0,6);});}).length;return {h:h,n:n,f:n/Math.max(ws.length,1)};})
+    .filter(function(x){return x.n>=2&&x.f>=0.4;}).sort(function(a,b){return b.f-a.f;}).slice(0,3).map(function(x){return x.h;});
+}
+var _dvT=0;
+function dvDigitando(v){DV.q=v;clearTimeout(_dvT);_dvT=setTimeout(function(){var p=dvParecidas(v),el=$('dv-par');if(!el)return;DV.parecidas=p;
+  el.innerHTML=p.length?'<div style="background:#FDF6E3;border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px"><b style="font-size:13px;color:#7A5A00">Você já perguntou algo parecido:</b>'+p.map(function(h){return '<button onclick="dvAbrirHist('+h.id+')" style="text-align:left;border:0;background:#fff;border-radius:10px;padding:7px 10px;font-size:13px;cursor:pointer"><b>'+esc(h.pergunta.length>140?h.pergunta.slice(0,140)+'…':h.pergunta)+'</b><span style="display:block;color:var(--muted);font-size:12px">'+dvData(h.criado_em)+'</span></button>';}).join('')+'</div>':'';},350);}
+function dvData(d){try{return new Date(d).toLocaleDateString('pt-BR');}catch(e){return '';}}
+function dvAbrirHist(id){DV.hq='';DV.abrirHist=id;vIA();setTimeout(function(){var e=$('dv-h-'+id);if(e){e.open=true;e.scrollIntoView({behavior:'smooth',block:'start'});}},50);}
+async function dvApagar(id){if(!confirm('Apagar esta pergunta do histórico?'))return;try{await db('duvidas?id=eq.'+id,{method:'DELETE'});DV.hist=DV.hist.filter(function(h){return h.id!==id;});vIA();}catch(e){alert(e.message);}}
 async function dvFontes(){try{DV.fontes=await db('fontes?select=id,nome,trechos,criado_em&order=nome');}catch(e){DV.fontes=[];DV.erroFontes=e.message;}if(atual==='ia'&&IA.modo==='duv')vIA();}
-function dvRespHtml(r){
-  var t=esc(r.texto).replace(/\[(\d+)\]/g,function(m,n){return '<a href="#" onclick="dvVer('+n+');return false" style="font-weight:800;color:var(--teal-ink);text-decoration:none">['+n+']</a>';});
+function dvRespHtml(r,plano){
+  var t=plano?esc(r.texto):esc(r.texto).replace(/\[(\d+)\]/g,function(m,n){return '<a href="#" onclick="dvVer('+n+');return false" style="font-weight:800;color:var(--teal-ink);text-decoration:none">['+n+']</a>';});
   t=t.replace(/^(Veredito|Fundamento|O que pedir ou conferir|Cenário A[^:\n]*|Cenário B[^:\n]*)(:)/gm,'<b>$1$2</b>');
   return '<div style="white-space:pre-wrap;font-size:14.5px;line-height:1.6">'+t+'</div>';
 }
@@ -678,14 +692,22 @@ function dvTrechosHtml(r){
   return (usados.length?'<details open id="dv-cit"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--ink2)">Trechos citados na resposta · '+usados.length+'</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'+usados.join('')+'</div></details>':'<div style="font-size:13px;color:var(--muted)">A resposta não citou nenhum trecho da base.</div>')+
     (outros.length?'<details id="dv-out"'+(DV.abrirTr?' open':'')+'><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--muted)">Outros trechos que a busca trouxe, não usados · '+outros.length+'</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'+outros.join('')+'</div></details>':'');
 }
+function dvHistItens(H){
+  return H.length?H.map(function(x){var tr=(x.trechos||[]).map(function(t){return esc(t.fonte)+(t.ref?' · '+esc(t.ref):'');}).join('<br>');
+    return '<details id="dv-h-'+x.id+'" style="background:var(--soft);border-radius:14px;padding:10px 12px"'+(DV.abrirHist===x.id?' open':'')+'><summary style="cursor:pointer;font-weight:700;font-size:13.5px">'+esc(x.pergunta)+' <span style="font-weight:500;color:var(--muted);font-size:12px">· '+dvData(x.criado_em)+'</span></summary><div style="margin-top:8px;display:flex;flex-direction:column;gap:8px">'+dvRespHtml({texto:x.resposta},true)+
+      (tr?'<div style="font-size:12px;color:var(--muted);line-height:1.5"><b>Fontes citadas:</b><br>'+tr+'</div>':'')+
+      '<div style="display:flex;gap:6px"><button class="btn2 btn-sm" onclick="copiar(DV.hist.find(function(h){return h.id==='+x.id+'}).resposta,this)">Copiar resposta</button><button class="btn2 btn-sm" onclick="dvApagar('+x.id+')">Apagar</button></div></div></details>';}).join(''):'<span style="font-size:13px;color:var(--muted)">Nada encontrado.</span>';
+}
+function dvHistLista(){var el=$('dv-hl');if(!el)return;el.innerHTML=dvHistItens((DV.hist||[]).filter(function(x){return !DV.hq.trim()||casa(x.pergunta+' '+x.resposta,DV.hq);}));}
 function dvVer(n){var e0=$('dv-tr-'+n);if(e0){var d=e0.closest('details');if(d)d.open=true;}var e=$('dv-tr-'+n);if(e){e.scrollIntoView({behavior:'smooth',block:'center'});e.style.outline='2px solid var(--teal)';setTimeout(function(){e.style.outline='';},1500);}}
 async function dvEnviar(){
-  DV.q=$('dv-q').value;DV.erro='';
+  clearTimeout(_dvT);DV.q=$('dv-q').value;DV.erro='';
   if(!DV.q.trim()){DV.erro='Escreva a dúvida antes de enviar.';vIA();return;}
   var b=iaBloqueio(DV.q);if(b){DV.erro='A pergunta parece ter '+b+'. Tire os dados do cliente antes de enviar.';vIA();return;}
-  if(DV.res)DV.hist.unshift({q:DV.res.q,res:DV.res});DV.hist=DV.hist.slice(0,5);
   DV.res=null;DV.abrirTr=false;DV.carregando=true;vIA();
-  try{var d=await iaChamar({modo:'duvida',texto:DV.q});d.q=DV.q;DV.res=d;DV.q='';}
+  try{var d=await iaChamar({modo:'duvida',texto:DV.q});d.q=DV.q;DV.res=d;DV.q='';
+    var cit=(d.trechos||[]).filter(function(x,i){return (d.citados||[]).indexOf(i+1)>=0;}).map(function(x){return {fonte:x.fonte,ref:x.ref,origem:x.origem,pagina:x.pagina};});
+    try{var sv=await db('duvidas',{method:'POST',body:JSON.stringify({pergunta:d.q,resposta:d.texto,trechos:cit})});if(sv&&sv[0]&&DV.hist)DV.hist.unshift(sv[0]);}catch(e){DV.erroSalvar=true;}}
   catch(e){DV.erro=e.message;}
   DV.carregando=false;vIA();
 }
@@ -696,13 +718,17 @@ function dvHtml(){
    '<div style="flex:3 1 480px;min-width:0;display:flex;flex-direction:column;gap:16px">'+
    '<section class="card" style="display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Sua dúvida</b>'+
      '<span style="font-size:13px;color:var(--muted)">Pergunte como perguntaria a um colega, sem dados do cliente. A resposta usa as leis e manuais abaixo e os roteiros do mês.</span>'+
-     '<textarea class="inp" id="dv-q" rows="4" placeholder="Ex.: Vendedor casado em comunhão parcial precisa da anuência do cônjuge se o imóvel foi comprado antes do casamento?" onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey))dvEnviar()">'+esc(DV.q)+'</textarea>'+
+     '<textarea class="inp" id="dv-q" rows="4" placeholder="Ex.: Vendedor casado em comunhão parcial precisa da anuência do cônjuge se o imóvel foi comprado antes do casamento?" onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey))dvEnviar()" oninput="dvDigitando(this.value)">'+esc(DV.q)+'</textarea><div id="dv-par"></div>'+
      (DV.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(DV.erro)+'</div>':'')+
      '<div style="display:flex;gap:10px;align-items:center"><button class="btn" onclick="dvEnviar()"'+(DV.carregando?' disabled':'')+'>'+(DV.carregando?'Procurando na base...':'Perguntar')+'</button><span style="font-size:12px;color:var(--muted)">Ctrl+Enter também envia</span></div></section>';
   if(DV.res)h+='<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;color:var(--muted);font-weight:700">'+esc(DV.res.q)+'</div>'+dvRespHtml(DV.res)+
      (DV.res.cortada?'<div class="box b-err" style="padding:8px 12px;font-size:13px;font-weight:600">A resposta foi cortada por tamanho. Tente perguntar de forma mais específica.</div>':'')+
      '<button class="btn2 btn-sm" style="align-self:flex-start" onclick="copiar(DV.res.texto,this)">Copiar resposta</button>'+dvTrechosHtml(DV.res)+'</section>';
-  if(DV.hist.length)h+='<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:15px">Perguntas anteriores</b>'+DV.hist.map(function(x){return '<details style="background:var(--soft);border-radius:14px;padding:10px 12px"><summary style="cursor:pointer;font-weight:700;font-size:13.5px">'+esc(x.q)+'</summary><div style="margin-top:8px">'+dvRespHtml(x.res)+'</div></details>';}).join('')+'<span style="font-size:12px;color:var(--muted)">Ficam só até você fechar a Bancada.</span></section>';
+  if(DV.hist===null){DV.hist=undefined;dvHist();}
+  var H=(DV.hist||[]).filter(function(x){return !DV.hq.trim()||casa(x.pergunta+' '+x.resposta,DV.hq);});
+  if(DV.hist&&DV.hist.length)h+='<section class="card" style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">Perguntas anteriores · '+DV.hist.length+'</b>'+
+    '<input class="inp" type="search" style="max-width:280px;padding:8px 14px" placeholder="Buscar nas perguntas..." value="'+esc(DV.hq)+'" oninput="DV.hq=this.value;dvHistLista()"></div><div id="dv-hl" style="display:flex;flex-direction:column;gap:8px">'+dvHistItens(H)+'</div></section>';
+  else if(DV.erroHist)h+='<div class="note">Não consegui carregar o histórico. O SQL do histórico já foi rodado?</div>';
   h+='</div><section class="card" style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px">Base da consulta</b>'+
      '<div style="font-size:13px;color:var(--muted);line-height:1.5">Os roteiros do mês entram sozinhos. Leis e manuais você adiciona aqui uma vez (PDF, TXT ou a página da lei salva do Planalto).</div>'+
      (DV.fontes===undefined?'<span style="font-size:13px;color:var(--muted)">Carregando...</span>':
@@ -916,6 +942,7 @@ function buscar(q){
     Object.keys(I.iqPaths).forEach(function(k){I.iqPaths[k].steps.forEach(function(s){add('iq',k,s,'IQ · '+I.iqPaths[k].n);});});}
   ['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(!v||!ROT_PAG[v.id])return;var qq=semAc(q).trim();
     ROT_PAG[v.id].forEach(function(txt,i){var a=semAc(txt),k=a.indexOf(qq);if(k>=0){var ini=Math.max(0,k-40);hits.push({g:'Roteiro · '+(tp==='fin'?'Financiamento':'Consórcio')+' · p. '+(i+1),t:rotSecao(v,i+1),s:txt.slice(ini,k+qq.length+90),go:function(){RT.r=tp;RT.pag=i+1;RT.q=q;ir('rot');}});}});});
+  (DV.hist||[]).forEach(function(x){if(casa(x.pergunta+' '+x.resposta,q))hits.push({g:'Dúvida anterior · '+dvData(x.criado_em),t:x.pergunta,s:x.resposta,go:function(){IA.modo='duv';ir('ia');dvAbrirHist(x.id);}});});
   linksTodos().forEach(function(l){if(casa(l.n,q))hits.push({g:'Links',t:l.n,s:l.links?l.links.map(function(x){return x.rot;}).join(' · '):l.u,go:function(){LK.q=l.n;ir('link');}});});
   CONS_TOP.forEach(function(t,i){if(casa(t.t+' '+t.ideia+' '+t.pts.join(' '),q))hits.push({g:'Consórcio',t:t.t,s:t.ideia,go:function(){CS.i=i;ir('cons');}});});
   CERTS.forEach(function(c){if(casa(c.t+' '+c.como.join(' ')+' '+c.melhor.join(' ')+' '+c.contra,q))hits.push({g:'Certificados',t:c.t,s:c.melhor.join(' · '),go:function(){ir('cert');}});});
@@ -936,7 +963,7 @@ async function iniciar(){
   $('view').innerHTML='<div class="note">Carregando...</div>';
   try{atual=localStorage.getItem('bancada_mod')||'pend';}catch(e){}
   renderNav();
-  try{await carregar();render();rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
+  try{await carregar();render();if(DV.hist===null){DV.hist=undefined;dvHist();}rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
   catch(e){if(/sessão|sem sessão/.test(e.message)){sair();return;}$('view').innerHTML='<div class="note">Não consegui carregar os dados: '+esc(e.message)+'</div>';}
 }
 (function(){sessao=lerSessao();if(sessao)iniciar();else mostrarLogin();})();
