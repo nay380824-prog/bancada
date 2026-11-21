@@ -669,12 +669,16 @@ function dvRespHtml(r){
 }
 function dvTrechosHtml(r){
   if(!r.trechos||!r.trechos.length)return '<div style="font-size:13px;color:var(--muted)">Nenhum trecho da base foi encontrado para esta pergunta.</div>';
-  return '<details'+(DV.abrirTr?' open':'')+'><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--ink2)">Trechos usados · '+r.trechos.length+'</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'+
-    r.trechos.map(function(x,i){var rot=x.origem==='roteiro',tp=/consórcio/.test(x.fonte)?'cs':'fin';
+  var cit=r.citados||[];
+  var card=function(x,i){var rot=x.origem==='roteiro',tp=/consórcio/.test(x.fonte)?'cs':'fin';
       return '<div id="dv-tr-'+(i+1)+'" style="background:var(--soft);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:4px;font-size:12.5px;line-height:1.5"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center"><b style="font-size:13px">['+(i+1)+'] '+esc(x.fonte)+(x.ref?' · '+esc(x.ref):'')+'</b>'+
-        (rot?'<button class="btn2 btn-sm" onclick="RT.r=\''+tp+'\';RT.pag='+x.pagina+';RT.q=\'\';ir(\'rot\')">Abrir página</button>':'')+'</div><span style="color:var(--muted);white-space:pre-wrap">'+esc(x.texto.length>420?x.texto.slice(0,420)+'…':x.texto)+'</span></div>';}).join('')+'</div></details>';
+        (rot?'<button class="btn2 btn-sm" onclick="RT.r=\''+tp+'\';RT.pag='+x.pagina+';RT.q=\'\';ir(\'rot\')">Abrir página</button>':'')+'</div><span style="color:var(--muted);white-space:pre-wrap">'+esc(x.texto.length>420?x.texto.slice(0,420)+'…':x.texto)+'</span></div>';};
+  var usados=[],outros=[];
+  r.trechos.forEach(function(x,i){(cit.indexOf(i+1)>=0?usados:outros).push(card(x,i));});
+  return (usados.length?'<details open id="dv-cit"><summary style="cursor:pointer;font-weight:700;font-size:14px;color:var(--ink2)">Trechos citados na resposta · '+usados.length+'</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'+usados.join('')+'</div></details>':'<div style="font-size:13px;color:var(--muted)">A resposta não citou nenhum trecho da base.</div>')+
+    (outros.length?'<details id="dv-out"'+(DV.abrirTr?' open':'')+'><summary style="cursor:pointer;font-weight:600;font-size:13px;color:var(--muted)">Outros trechos que a busca trouxe, não usados · '+outros.length+'</summary><div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">'+outros.join('')+'</div></details>':'');
 }
-function dvVer(n){DV.abrirTr=true;var d=document.querySelector('#view details');if(d)d.open=true;var e=$('dv-tr-'+n);if(e){e.scrollIntoView({behavior:'smooth',block:'center'});e.style.outline='2px solid var(--teal)';setTimeout(function(){e.style.outline='';},1500);}}
+function dvVer(n){var e0=$('dv-tr-'+n);if(e0){var d=e0.closest('details');if(d)d.open=true;}var e=$('dv-tr-'+n);if(e){e.scrollIntoView({behavior:'smooth',block:'center'});e.style.outline='2px solid var(--teal)';setTimeout(function(){e.style.outline='';},1500);}}
 async function dvEnviar(){
   DV.q=$('dv-q').value;DV.erro='';
   if(!DV.q.trim()){DV.erro='Escreva a dúvida antes de enviar.';vIA();return;}
@@ -696,6 +700,7 @@ function dvHtml(){
      (DV.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(DV.erro)+'</div>':'')+
      '<div style="display:flex;gap:10px;align-items:center"><button class="btn" onclick="dvEnviar()"'+(DV.carregando?' disabled':'')+'>'+(DV.carregando?'Procurando na base...':'Perguntar')+'</button><span style="font-size:12px;color:var(--muted)">Ctrl+Enter também envia</span></div></section>';
   if(DV.res)h+='<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;color:var(--muted);font-weight:700">'+esc(DV.res.q)+'</div>'+dvRespHtml(DV.res)+
+     (DV.res.cortada?'<div class="box b-err" style="padding:8px 12px;font-size:13px;font-weight:600">A resposta foi cortada por tamanho. Tente perguntar de forma mais específica.</div>':'')+
      '<button class="btn2 btn-sm" style="align-self:flex-start" onclick="copiar(DV.res.texto,this)">Copiar resposta</button>'+dvTrechosHtml(DV.res)+'</section>';
   if(DV.hist.length)h+='<section class="card" style="display:flex;flex-direction:column;gap:8px"><b style="font-size:15px">Perguntas anteriores</b>'+DV.hist.map(function(x){return '<details style="background:var(--soft);border-radius:14px;padding:10px 12px"><summary style="cursor:pointer;font-weight:700;font-size:13.5px">'+esc(x.q)+'</summary><div style="margin-top:8px">'+dvRespHtml(x.res)+'</div></details>';}).join('')+'<span style="font-size:12px;color:var(--muted)">Ficam só até você fechar a Bancada.</span></section>';
   h+='</div><section class="card" style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px">Base da consulta</b>'+
