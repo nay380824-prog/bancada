@@ -101,7 +101,7 @@ abbr{text-decoration:underline dotted var(--teal);text-underline-offset:3px;colo
 .b-err{background:#FBE4E4;color:#5C1414;border:1px solid #F0B8B8}
 .b-off{background:var(--bg);color:var(--ink2);border:1px solid var(--line)}
 .b-info{background:#E3EEFB;color:#12345E;border:1px solid #B9D3F2}
-@media(max-width:760px){nav{max-width:none;position:static}.tiles{grid-template-columns:1fr}}
+@media(max-width:760px){#app{padding:12px;gap:12px}nav{max-width:none;position:static;padding:12px}.brand{padding:0 6px 8px}#nav-list{display:flex;overflow-x:auto;gap:4px}.nav-a{width:auto;white-space:nowrap;padding:9px 12px}.nav-foot{display:none}.tiles{grid-template-columns:1fr}.head h1{font-size:24px}}
 </style>
 </head>
 <body>
@@ -630,35 +630,190 @@ function vCert(){
    '<div class="note" style="margin-top:16px"><b>Validade:</b> o certificado emitido na Uniproof vale 1 ano.</div>';
 }
 
-/* ====== ASSISTENTE ====== */
-var IA={modo:'txt',destino:'email',texto:'',res:null,carregando:false,erro:'',teste:''};
+/* ====== ASSISTENTE (ponte com o celular, sem API) ====== */
+var IA={modo:'txt',destino:'email',texto:'',res:null,carregando:false,erro:'',pend:null};
 var IA_BLOQ=[[/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/,'CPF'],[/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/,'CNPJ'],[/[\w.+-]+@[\w-]+\.[\w.-]+/,'e-mail'],[/(\(?\b\d{2}\)?\s?)?\b9?\d{4}-?\d{4}\b/,'telefone'],[/matr[ií]cula\s*(n[º°o.]*\s*)?\d/i,'número de matrícula']];
 function iaBloqueio(t){for(var i=0;i<IA_BLOQ.length;i++)if(IA_BLOQ[i][0].test(t))return IA_BLOQ[i][1];return null;}
-async function iaChamar(body){
-  var t=await token();
-  var r=await fetch(SB_URL+'/functions/v1/assistente',{method:'POST',headers:{'Authorization':'Bearer '+t,'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify(body)});
-  var d={};try{d=await r.json();}catch(e){}
-  if(!r.ok)throw new Error(d.erro||d.message||('Erro '+r.status+(r.status===404?': a função "assistente" ainda não foi criada no Supabase.':'')));
-  return d;
+var DESTINOS={
+  email:'um e-mail profissional para cliente ou parceiro: cordial, claro, com saudação e fechamento curtos',
+  whatsapp:'uma mensagem de WhatsApp: curta, educada e direta, sem formalidade excessiva, em parágrafos curtos',
+  pendencia:'uma pendência formal de análise de operação: objetiva e impessoal, dizendo exatamente qual documento ou ajuste é necessário e por quê'
+};
+function promptTexto(t,dest){
+  return 'Melhore o rascunho abaixo para '+DESTINOS[dest]+'.\n\n'+
+    'Regras:\n- Mantenha o sentido e todas as informações. Não invente prazos, valores, documentos ou regras.\n'+
+    '- Mantenha exatamente como estão os campos entre colchetes, como [NOME] e [CPF].\n'+
+    '- Português do Brasil, correto e natural.\n'+
+    '- Responda em texto simples, sem markdown (sem asteriscos, sem #), porque vou colar em outro sistema.\n\n'+
+    'Formato da resposta:\n1) Só o texto revisado, pronto para copiar.\n2) Depois, numa linha sozinha: ---MUDANÇAS---\n3) Abaixo, em até 4 linhas curtas, o que você mudou.\n\n'+
+    'Rascunho:\n"""\n'+t+'\n"""';
 }
-async function iaTestar(){
-  IA.teste='Testando...';vIA();
-  try{var d=await iaChamar({modo:'teste'});IA.teste='✓ Conexão funcionando ('+d.modelo+' respondeu "'+d.resposta+'").';}
-  catch(e){IA.teste='✗ '+e.message;}
-  vIA();
+function promptDuvida(q,tr){
+  var s='Trabalho como assistente num banco, em operações de financiamento imobiliário e de intermediação de consórcio. Tenho uma dúvida de trabalho.\n\nDúvida:\n"""\n'+q+'\n"""\n\n';
+  if(tr.length)s+='Trechos da minha base de consulta (leis, manuais e roteiros internos), numerados:\n\n'+
+    tr.map(function(x,i){return '['+(i+1)+'] '+x.fonte+(x.ref?' · '+x.ref:'')+'\n'+x.texto;}).join('\n\n')+'\n\n';
+  s+='Como responder:\n'+
+    (tr.length?'- Use os trechos como fundamento principal e cite pelo número, assim: [2].\n- Trechos de fontes cujo nome começa com "Doutrina" servem só como apoio de interpretação.\n- Se os trechos não resolverem, diga isso claramente e responda pelo seu conhecimento, avisando que não está na base.\n':'- Não mandei trechos da base. Responda pelo seu conhecimento da legislação e diga quando algo depende da norma interna do banco.\n')+
+    '- Não invente número de artigo, item de manual ou regra.\n'+
+    '- Se a resposta depender de um fato que não informei, separe em "Cenário A" e "Cenário B".\n'+
+    '- Texto simples, sem markdown (sem asteriscos, sem #), porque vou colar em outro sistema.\n\n'+
+    'Formato:\nVeredito: (uma ou duas frases)\nFundamento: (por quê, citando os trechos)\nO que pedir ou conferir: (lista curta)';
+  return s;
+}
+function limparMd(t){
+  return String(t||'').replace(/\r/g,'').replace(/\*\*(.+?)\*\*/g,'$1').replace(/__(.+?)__/g,'$1')
+    .replace(/^#{1,6}\s*/gm,'').replace(/^\s*[*•]\s+/gm,'- ').replace(/`([^`]+)`/g,'$1').replace(/\n{3,}/g,'\n\n').trim();
+}
+function separarMudancas(t){
+  var p=t.split(/^\s*-{2,}\s*MUDAN[ÇC]AS\s*-{2,}\s*$/im);
+  return {texto:p[0].trim(),mudancas:(p[1]||'').trim()};
+}
+
+/* ---- busca local na base (sem IA) ---- */
+var BUSCA_STOP=' a o e de da do das dos em no na nos nas um uma para por com sem que se ou como qual quais quando onde pode posso precisa tem ter ser foi esta este essa esse isso caso operacao cliente preciso pela pelo sobre mais deve devo '.split(' ');
+function buscaPalavras(q){
+  var vistos={};
+  return String(q).toLowerCase().replace(/[^a-z0-9à-ÿ]+/g,' ').split(/\s+/).filter(function(w){
+    var k=semAc(w);if(w.length<4||BUSCA_STOP.indexOf(k)>=0||vistos[k])return false;vistos[k]=1;return true;
+  }).map(function(w){return w.length>7?w.slice(0,7):w;});
+}
+function pontuar(txt,ws){var a=semAc(txt),n=0,f=0;ws.forEach(function(w){var k=semAc(w),i=a.indexOf(k);if(i>=0){n++;f+=Math.min(5,a.split(k).length-1);}});return n*10+f;}
+async function buscarBase(q){
+  var ws=buscaPalavras(q).slice(0,8),out=[];if(!ws.length)return out;
+  var min=ws.length>=3?2:1;
+  try{
+    if(!DV.fontes||!DV.fontes.length)DV.fontes=await db('fontes?select=id,nome,trechos,criado_em&order=nome')||[];
+    var nomes={};(DV.fontes||[]).forEach(function(f){nomes[f.id]=f.nome;});
+    var rows=await db('trechos?select=fonte_id,ref,texto&or=('+ws.map(function(w){return 'texto.ilike.*'+encodeURIComponent(w)+'*';}).join(',')+')&limit=250')||[];
+    rows.forEach(function(r){var s=pontuar(r.texto,ws);if(Math.floor(s/10)>=min)out.push({s:s,fonte:nomes[r.fonte_id]||'Base',ref:r.ref,texto:r.texto.length>1500?r.texto.slice(0,1500)+'…':r.texto,origem:'base'});});
+  }catch(e){}
+  out.sort(function(a,b){return b.s-a.s;});out=out.slice(0,6);
+  var rot=[];
+  ['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(!v||!ROT_PAG[v.id])return;
+    ROT_PAG[v.id].forEach(function(txt,i){var s=pontuar(txt,ws);if(Math.floor(s/10)<min)return;
+      var a=semAc(txt),k=-1;ws.some(function(w){k=a.indexOf(semAc(w));return k>=0;});var ini=Math.max(0,k-400);
+      rot.push({s:s,fonte:'Roteiro de '+(tp==='fin'?'financiamento':'consórcio')+' · '+mesNome(v.mes),ref:'p. '+(i+1)+' · '+rotSecao(v,i+1),texto:(ini>0?'…':'')+txt.slice(ini,ini+1400)+'…',origem:'roteiro',pagina:i+1});});});
+  rot.sort(function(a,b){return b.s-a.s;});
+  return out.concat(rot.slice(0,3)).map(function(x){delete x.s;return x;});
+}
+
+/* ---- ponte: guarda o pedido e espera a resposta ---- */
+var PONTE={txt:null,duv:null,timer:0};
+function ponteGuardar(){try{localStorage.setItem('bancada_ponte',JSON.stringify({txt:PONTE.txt,duv:PONTE.duv}));}catch(e){}}
+function ponteLer(){try{var p=JSON.parse(localStorage.getItem('bancada_ponte')||'{}');PONTE.txt=p.txt||null;PONTE.duv=p.duv||null;}catch(e){}}
+function ponteVigiar(){clearInterval(PONTE.timer);if(PONTE.txt||PONTE.duv)PONTE.timer=setInterval(ponteChecar,4000);}
+var _tituloOrig=document.title;
+function avisarChegou(){if(document.hidden){document.title='● Resposta chegou · Bancada';}}
+document.addEventListener('visibilitychange',function(){
+  if(!document.hidden){document.title=_tituloOrig;if(PONTE.txt||PONTE.duv)ponteChecar();if(atual==='ia'&&IA.modo==='fila')flCarregar();}
+});
+async function ponteChecar(){
+  var ids=[PONTE.txt&&PONTE.txt.id,PONTE.duv&&PONTE.duv.id].filter(Boolean);
+  if(!ids.length){ponteVigiar();return;}
+  var rows;try{rows=await db('ponte?select=*&id=in.('+ids.join(',')+')')||[];}catch(e){return;}
+  var mudou=false;
+  ['txt','duv'].forEach(function(tp){
+    var p=PONTE[tp];if(!p)return;var r=rows.find(function(x){return x.id===p.id;});
+    if(!r){PONTE[tp]=null;mudou=true;return;}
+    if(!r.resposta)return;
+    var resp=limparMd(r.resposta);
+    if(tp==='txt'){IA.res=separarMudancas(resp);}
+    else{
+      var cit=[];resp.replace(/\[(\d+)\]/g,function(m,n){n=+n;if(cit.indexOf(n)<0)cit.push(n);});
+      DV.res={q:r.pergunta,texto:resp,trechos:r.trechos||[],citados:cit};
+      var tc=(r.trechos||[]).filter(function(x,i){return cit.indexOf(i+1)>=0;}).map(function(x){return {fonte:x.fonte,ref:x.ref,origem:x.origem,pagina:x.pagina};});
+      db('duvidas',{method:'POST',body:JSON.stringify({pergunta:r.pergunta,resposta:resp,trechos:tc})}).then(function(sv){if(sv&&sv[0]&&DV.hist){DV.hist.unshift(sv[0]);if(atual==='ia'&&IA.modo==='duv')vIA();}}).catch(function(){});
+    }
+    db('ponte?id=eq.'+r.id,{method:'DELETE'}).catch(function(){});
+    PONTE[tp]=null;mudou=true;avisarChegou();
+  });
+  if(mudou){ponteGuardar();ponteVigiar();if(atual==='ia'&&IA.modo!=='fila')vIA();}
+}
+async function ponteCriar(row){
+  var r=await db('ponte',{method:'POST',body:JSON.stringify(row)});
+  if(!r||!r[0])throw new Error('Não consegui salvar o pedido.');return r[0];
+}
+async function ponteCancelar(tp){
+  var p=PONTE[tp];if(!p)return;PONTE[tp]=null;ponteGuardar();ponteVigiar();vIA();
+  try{await db('ponte?id=eq.'+p.id,{method:'DELETE'});}catch(e){}
 }
 async function iaEnviar(){
-  IA.texto=$('ia-txt').value;IA.erro='';IA.res=null;
+  IA.texto=$('ia-txt').value;IA.erro='';
   if(!IA.texto.trim()){IA.erro='Cole o texto antes de enviar.';vIA();return;}
   var b=iaBloqueio(IA.texto);
   if(b){IA.erro='O texto parece ter '+b+'. Troque por um campo como [NOME] ou [CPF] antes de enviar.';vIA();return;}
   IA.carregando=true;vIA();
-  try{IA.res=await iaChamar({modo:'texto',texto:IA.texto,destino:IA.destino});}
-  catch(e){IA.erro=e.message;}
+  try{
+    if(PONTE.txt)db('ponte?id=eq.'+PONTE.txt.id,{method:'DELETE'}).catch(function(){});
+    var r=await ponteCriar({tipo:'txt',destino:IA.destino,pergunta:IA.texto,prompt:promptTexto(IA.texto,IA.destino)});
+    PONTE.txt={id:r.id,prompt:r.prompt};IA.res=null;ponteGuardar();ponteVigiar();
+  }catch(e){IA.erro=e.message+(/ponte/.test(e.message)?' (a tabela "ponte" já foi criada no Supabase?)':'');}
   IA.carregando=false;vIA();
 }
-function iaModo(m){IA.modo=m;vIA();}
+function iaModo(m){if($('ia-txt'))IA.texto=$('ia-txt').value;IA.modo=m;vIA();}
 function iaDest(d){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.destino=d;vIA();}
+function esperandoHtml(tp){
+  return '<div class="box b-info"><b style="font-size:16px">Aguardando a resposta do celular…</b>'+
+    '<span style="font-size:14px;line-height:1.5">No iPhone: abra a Bancada → <b>Assistente</b> → <b>Fila do celular</b>. Quando você colar a resposta lá, ela aparece aqui sozinha.</span>'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn2 btn-sm" onclick="copiar(PONTE.'+tp+'.prompt,this,\'Pedido copiado ✓\')">Copiar pedido</button><button class="btn2 btn-sm" onclick="ponteCancelar(\''+tp+'\')">Cancelar</button></div></div>';
+}
+
+/* ---- Fila do celular ---- */
+var FL={itens:null,ok:'',erro:'',manual:{}};
+async function flCarregar(){
+  try{FL.itens=await db('ponte?select=id,tipo,destino,pergunta,prompt,criado_em&resposta=is.null&order=criado_em.asc')||[];FL.erro='';}
+  catch(e){FL.itens=[];FL.erro='Não consegui ler a fila. A tabela "ponte" já foi criada no Supabase?';}
+  if(atual==='ia'&&IA.modo==='fila')vIA();
+}
+function flItem(id){return (FL.itens||[]).find(function(x){return x.id===id;});}
+async function flEnviar(id,btn){
+  var it=flItem(id);if(!it)return;
+  if(navigator.share){try{await navigator.share({text:it.prompt});return;}catch(e){if(e&&e.name==='AbortError')return;}}
+  copiar(it.prompt,btn,'Copiado ✓ cole no Claude');
+}
+async function flColar(id){
+  var t='';
+  try{if(navigator.clipboard&&navigator.clipboard.readText)t=await navigator.clipboard.readText();}catch(e){}
+  if(!t||t.trim().length<5){FL.manual[id]=true;FL.ok='';vIA();setTimeout(function(){var e=$('fl-m-'+id);if(e)e.focus();},50);return;}
+  var it=flItem(id);
+  if(it&&t.trim()===it.prompt.trim()){FL.erro='O que está copiado ainda é o pedido, não a resposta. No Claude, toque em copiar embaixo da resposta.';vIA();return;}
+  flResponder(id,t);
+}
+async function flResponder(id,t){
+  t=limparMd(t);if(t.length<5){FL.erro='A resposta está vazia.';vIA();return;}
+  try{await db('ponte?id=eq.'+id,{method:'PATCH',body:JSON.stringify({resposta:t,respondido_em:new Date().toISOString()})});
+    FL.itens=FL.itens.filter(function(x){return x.id!==id;});delete FL.manual[id];FL.erro='';FL.ok='Resposta enviada ✓ Já aparece no computador.';}
+  catch(e){FL.erro='Não consegui enviar: '+e.message;}
+  vIA();
+}
+async function flDescartar(id){
+  if(!confirm('Descartar este pedido?'))return;
+  try{await db('ponte?id=eq.'+id,{method:'DELETE'});}catch(e){}
+  FL.itens=FL.itens.filter(function(x){return x.id!==id;});vIA();
+}
+function flHtml(){
+  if(FL.itens===null){flCarregar();return '<div class="note" style="margin-top:16px">Carregando a fila...</div>';}
+  var h='<div style="display:flex;flex-direction:column;gap:12px;margin-top:16px">';
+  if(FL.ok)h+='<div class="box b-ok" style="background:#DDF3EC;border-color:#A9D9CB;color:#0B5C4A;font-weight:700">'+esc(FL.ok)+'</div>';
+  if(FL.erro)h+='<div class="box b-err" style="font-weight:600;font-size:14px">'+esc(FL.erro)+'</div>';
+  if(!FL.itens.length)h+='<div class="note">Nada na fila. Mande uma dúvida ou um texto pelo computador e toque em Atualizar.</div>';
+  FL.itens.forEach(function(it){
+    var rot=it.tipo==='duv'?'Dúvida':'Melhorar texto · '+({email:'E-mail',whatsapp:'WhatsApp',pendencia:'Pendência'}[it.destino]||'');
+    var pv=it.pergunta.replace(/\s+/g,' ');if(pv.length>220)pv=pv.slice(0,220)+'…';
+    var hr='';try{hr=new Date(it.criado_em).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});}catch(e){}
+    h+='<section class="card" style="display:flex;flex-direction:column;gap:12px;padding:16px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="tag '+(it.tipo==='duv'?'t-cs':'t-msg')+'" style="font-size:12px">'+esc(rot)+'</span><small style="color:var(--muted)">'+hr+'</small></div>'+
+      '<div style="font-size:15px;line-height:1.5">'+esc(pv)+'</div>'+
+      '<div style="display:flex;flex-direction:column;gap:8px">'+
+        '<button class="btn" style="padding:13px" onclick="flEnviar('+it.id+',this)">1. Enviar pro Claude</button>'+
+        '<button class="btn2" style="padding:12px" onclick="flColar('+it.id+')">2. Colar resposta</button></div>'+
+      (FL.manual[it.id]?'<div style="display:flex;flex-direction:column;gap:8px"><span style="font-size:13px;color:var(--muted)">Não consegui ler a área de transferência. Toque e segure aqui embaixo e escolha Colar:</span><textarea class="inp" id="fl-m-'+it.id+'" rows="5"></textarea><button class="btn" onclick="flResponder('+it.id+',$(\'fl-m-'+it.id+'\').value)">Enviar resposta</button></div>':'')+
+      '<div style="display:flex;gap:8px;justify-content:space-between"><button class="btn2 btn-sm" onclick="copiar(flItem('+it.id+').prompt,this)">Só copiar o pedido</button><button class="btn2 btn-sm" onclick="flDescartar('+it.id+')">Descartar</button></div>'+
+      '</section>';
+  });
+  h+='<button class="btn2" style="align-self:center" onclick="FL.ok=\'\';FL.erro=\'\';FL.itens=null;vIA()">Atualizar</button></div>';
+  return h;
+}
 /* ---- Tirar dúvida ---- */
 var DV={q:'',res:null,carregando:false,erro:'',hist:null,fontes:null,lendo:'',hq:'',parecidas:[]};
 var DV_STOP=' a o e de da do das dos em no na nos nas um uma para por com sem que se ou como qual quais quando onde pode posso precisa tem ter ser foi esta este essa esse isso caso operacao '.split(' ');
@@ -705,10 +860,12 @@ async function dvEnviar(){
   if(!DV.q.trim()){DV.erro='Escreva a dúvida antes de enviar.';vIA();return;}
   var b=iaBloqueio(DV.q);if(b){DV.erro='A pergunta parece ter '+b+'. Tire os dados do cliente antes de enviar.';vIA();return;}
   DV.res=null;DV.abrirTr=false;DV.carregando=true;vIA();
-  try{var d=await iaChamar({modo:'duvida',texto:DV.q});d.q=DV.q;DV.res=d;DV.q='';
-    var cit=(d.trechos||[]).filter(function(x,i){return (d.citados||[]).indexOf(i+1)>=0;}).map(function(x){return {fonte:x.fonte,ref:x.ref,origem:x.origem,pagina:x.pagina};});
-    try{var sv=await db('duvidas',{method:'POST',body:JSON.stringify({pergunta:d.q,resposta:d.texto,trechos:cit})});if(sv&&sv[0]&&DV.hist)DV.hist.unshift(sv[0]);}catch(e){DV.erroSalvar=true;}}
-  catch(e){DV.erro=e.message;}
+  try{
+    var tr=await buscarBase(DV.q);
+    if(PONTE.duv)db('ponte?id=eq.'+PONTE.duv.id,{method:'DELETE'}).catch(function(){});
+    var r=await ponteCriar({tipo:'duv',pergunta:DV.q,prompt:promptDuvida(DV.q,tr),trechos:tr});
+    PONTE.duv={id:r.id,prompt:r.prompt,q:DV.q,n:tr.length};DV.q='';ponteGuardar();ponteVigiar();
+  }catch(e){DV.erro=e.message+(/ponte/.test(e.message)?' (a tabela "ponte" já foi criada no Supabase?)':'');}
   DV.carregando=false;vIA();
 }
 function dvHtml(){
@@ -717,10 +874,11 @@ function dvHtml(){
   var h='<div class="row" style="margin-top:16px;align-items:flex-start">'+
    '<div style="flex:3 1 480px;min-width:0;display:flex;flex-direction:column;gap:16px">'+
    '<section class="card" style="display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Sua dúvida</b>'+
-     '<span style="font-size:13px;color:var(--muted)">Pergunte como perguntaria a um colega, sem dados do cliente. A resposta usa as leis e manuais abaixo e os roteiros do mês.</span>'+
+     '<span style="font-size:13px;color:var(--muted)">Pergunte como perguntaria a um colega, sem dados do cliente. A Bancada junta os trechos mais parecidos das leis, manuais e roteiros e manda tudo pro celular.</span>'+
      '<textarea class="inp" id="dv-q" rows="4" placeholder="Ex.: Vendedor casado em comunhão parcial precisa da anuência do cônjuge se o imóvel foi comprado antes do casamento?" onkeydown="if(event.key===\'Enter\'&&(event.ctrlKey||event.metaKey))dvEnviar()" oninput="dvDigitando(this.value)">'+esc(DV.q)+'</textarea><div id="dv-par"></div>'+
      (DV.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(DV.erro)+'</div>':'')+
-     '<div style="display:flex;gap:10px;align-items:center"><button class="btn" onclick="dvEnviar()"'+(DV.carregando?' disabled':'')+'>'+(DV.carregando?'Procurando na base...':'Perguntar')+'</button><span style="font-size:12px;color:var(--muted)">Ctrl+Enter também envia</span></div></section>';
+     '<div style="display:flex;gap:10px;align-items:center"><button class="btn" onclick="dvEnviar()"'+(DV.carregando?' disabled':'')+'>'+(DV.carregando?'Montando o pedido...':'Mandar pro celular')+'</button><span style="font-size:12px;color:var(--muted)">Ctrl+Enter também envia</span></div></section>';
+  if(PONTE.duv)h+='<section class="card" style="display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;color:var(--muted);font-weight:700">'+esc(PONTE.duv.q||'')+'</div>'+(PONTE.duv.n!=null?'<span style="font-size:13px;color:var(--muted)">'+(PONTE.duv.n?PONTE.duv.n+' trecho'+(PONTE.duv.n>1?'s':'')+' da base foram junto com a pergunta.':'Nenhum trecho da base bateu com a pergunta: vai só a dúvida.')+'</span>':'')+esperandoHtml('duv')+'</section>';
   if(DV.res)h+='<section class="card" style="display:flex;flex-direction:column;gap:12px"><div style="font-size:13px;color:var(--muted);font-weight:700">'+esc(DV.res.q)+'</div>'+dvRespHtml(DV.res)+
      (DV.res.cortada?'<div class="box b-err" style="padding:8px 12px;font-size:13px;font-weight:600">A resposta foi cortada por tamanho. Tente perguntar de forma mais específica.</div>':'')+
      '<button class="btn2 btn-sm" style="align-self:flex-start" onclick="copiar(DV.res.texto,this)">Copiar resposta</button>'+dvTrechosHtml(DV.res)+'</section>';
@@ -835,8 +993,10 @@ async function dvSubir(){
   }catch(e){DV.enviando=false;var b=$('f-btn');if(b)b.disabled=false;$('f-err').textContent=e.message;dvStatus('');}
 }
 function vIA(){
-  var h=cab('Assistente','Textos e dúvidas sem precisar passar pelo celular.',segHtml([['txt','Melhorar texto'],['duv','Tirar dúvida']],IA.modo,'iaModo'));
-  if(IA.modo==='duv'){
+  var h=cab('Assistente','Monte aqui, resolva no Claude do celular e a resposta volta pra cá.',segHtml([['txt','Melhorar texto'],['duv','Tirar dúvida'],['fila','Fila do celular']],IA.modo,'iaModo'));
+  if(IA.modo==='fila'){
+    h+=flHtml();
+  } else if(IA.modo==='duv'){
     h+=dvHtml();
   } else {
     h+='<div class="row" style="margin-top:16px;align-items:stretch">'+
@@ -846,15 +1006,16 @@ function vIA(){
      '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><b style="font-size:13px;color:var(--ink2)">Para:</b>'+
        [['email','E-mail'],['whatsapp','WhatsApp'],['pendencia','Pendência formal']].map(function(x){return '<button class="chip'+(IA.destino===x[0]?' on':'')+'" onclick="iaDest(\''+x[0]+'\')">'+x[1]+'</button>';}).join('')+'</div>'+
      (IA.erro?'<div class="box b-err" style="padding:10px 14px;font-weight:600;font-size:14px">'+esc(IA.erro)+'</div>':'')+
-     '<button class="btn" style="align-self:flex-start" onclick="iaEnviar()"'+(IA.carregando?' disabled':'')+'>'+(IA.carregando?'Melhorando...':'Melhorar texto')+'</button></section>'+
+     '<button class="btn" style="align-self:flex-start" onclick="iaEnviar()"'+(IA.carregando?' disabled':'')+'>'+(IA.carregando?'Enviando...':'Mandar pro celular')+'</button></section>'+
      '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px"><b style="font-size:18px">Texto revisado</b>'+
+     (PONTE.txt?esperandoHtml('txt'):'')+
      (IA.res?'<div class="pd-out" style="height:auto;min-height:220px">'+marcar(IA.res.texto)+'</div>'+
        (IA.res.mudancas?'<div style="background:var(--soft);border-radius:14px;padding:10px 14px;font-size:13px;white-space:pre-wrap"><b style="display:block;font-size:12px;color:#4F555E;margin-bottom:2px">O QUE MUDOU</b>'+esc(IA.res.mudancas)+'</div>':'')+
        '<button class="btn2" style="align-self:flex-start" id="ia-copy" onclick="copiar(limparCopia(IA.res.texto),this)">Copiar texto</button>'
-      :'<div style="color:var(--muted);font-size:14px;padding:30px 10px;text-align:center">O texto revisado aparece aqui.</div>')+
+      :(PONTE.txt?'':'<div style="color:var(--muted);font-size:14px;padding:30px 10px;text-align:center">O texto revisado aparece aqui.</div>'))+
      '</section></div>';
   }
-  h+='<div class="note" style="margin-top:16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><span>'+(IA.teste?esc(IA.teste):'Primeira vez? Teste se a Bancada consegue falar com a IA.')+'</span><button class="btn2 btn-sm" onclick="iaTestar()">Testar conexão</button></div>';
+  if(IA.modo!=='fila')h+='<div class="note" style="margin-top:16px;font-size:13px;line-height:1.5">Como funciona: aqui você manda o pedido. No iPhone, abra a Bancada → Assistente → <b>Fila do celular</b>, toque em <b>Enviar pro Claude</b>, copie a resposta no app e toque em <b>Colar resposta</b>. Ela aparece nesta tela sozinha.</div>';
   $('view').innerHTML=h;
 }
 
@@ -962,6 +1123,8 @@ async function iniciar(){
   $('login').classList.add('hide');$('app').classList.remove('hide');
   $('view').innerHTML='<div class="note">Carregando...</div>';
   try{atual=localStorage.getItem('bancada_mod')||'pend';}catch(e){}
+  if(window.matchMedia&&matchMedia('(max-width:760px)').matches){atual='ia';IA.modo='fila';}
+  ponteLer();ponteVigiar();
   renderNav();
   try{await carregar();render();if(DV.hist===null){DV.hist=undefined;dvHist();}rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
   catch(e){if(/sessão|sem sessão/.test(e.message)){sair();return;}$('view').innerHTML='<div class="note">Não consegui carregar os dados: '+esc(e.message)+'</div>';}
