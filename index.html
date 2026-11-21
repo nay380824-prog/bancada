@@ -319,7 +319,9 @@ function smCalc(){
   else{P=F0;disp=Math.min(D2,S);}
   var nome=cs?'carta':'financiamento',esp=Math.max(0,teto-P),fg=Math.min(disp,esp),fica=Math.max(0,S-fg),pUsa=Math.min(P,CV),prop=Math.max(0,CV-pUsa-fg);
   var mudou=!cs&&P!==F0;
-  var seg=function(parts){var tot=parts.reduce(function(a,x){return a+x.v;},0)||1;return '<div class="bar">'+parts.filter(function(x){return x.v>0;}).map(function(x){return '<div style="flex:'+Math.max(14,x.v/tot*100)+' 1 0;background:'+x.c+';color:'+(x.t||'#fff')+'">'+x.l+' · '+R2(x.v)+'</div>';}).join('')+'</div>';};
+  var seg=function(parts){var p=parts.filter(function(x){return x.v>0;}),tot=p.reduce(function(a,x){return a+x.v;},0)||1;
+    return '<div><div class="bar" style="height:18px;border-radius:9px">'+p.map(function(x){return '<div style="flex:'+Math.max(2,x.v/tot*100)+' 1 0;background:'+x.c+'"></div>';}).join('')+'</div>'+
+      '<div style="display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px">'+p.map(function(x){return '<span style="display:flex;align-items:center;gap:6px;font-size:13px"><span style="width:10px;height:10px;border-radius:3px;background:'+x.c+';flex:none"></span>'+x.l+' <b>'+R2(x.v)+'</b></span>';}).join('')+'</div></div>';};
   var passo=function(n,t,c,b){return '<div class="card" style="padding:16px 18px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;align-items:center;gap:10px"><span class="num" style="background:var(--bg);border:0">'+n+'</span><b style="font-size:16px">'+t+'</b></div><div class="calc">'+c+'</div>'+(b||'')+'</div>';};
   var h='<div class="tiles"><div class="tile"><small>FGTS no saque</small><div style="color:#3D6E12">'+R2(fg)+'</div><small style="font-weight:500">'+(fica>0?R2(fica)+' ficam na conta':'todo o saldo cabe')+'</small></div>'+
    '<div class="tile"><small>'+(cs?'Carta':'Financiamento')+'</small><div style="color:#0F5E54">'+R2(P)+'</div><small style="font-weight:500">'+(cs?'disponível − tarifas':(mudou?'era '+R2(F0)+' na proposta':'valor financiado'))+'</small></div>'+
