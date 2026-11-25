@@ -152,7 +152,7 @@ abbr{text-decoration:underline dotted var(--teal);text-underline-offset:3px;colo
   <main>
     <div class="topo"><span class="crumb" id="crumb"></span><div class="search-top" style="flex:1 1 320px;max-width:520px">
       <label><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#646A73" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
-      <input type="search" id="q-geral" placeholder="Buscar em tudo: textos de pendência, intermediação, conceitos..." aria-label="Busca geral" autocomplete="off"></label>
+      <input type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="q-geral" placeholder="Buscar em tudo: textos de pendência, intermediação, conceitos..." aria-label="Busca geral"></label>
       <div class="results hide" id="results"></div>
     </div></div>
     <div id="view"></div>
@@ -239,7 +239,7 @@ var ICON={
  nota:'<path d="M5 4h14v16l-4-3H5z"/><path d="M9 9h6M9 12h4"/>',
  int:'<path d="M7 10h10M7 14h6"/><path d="M4 6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-6l-4 3v-3H6a2 2 0 0 1-2-2z"/>'
 };
-var MODS=[['pend','Pendências'],['rot','Roteiros'],['ia','Assistente'],['nota','Notas'],['cons','Consórcio'],['cert','Certificados'],['link','Links'],['sim','Simulador FGTS'],['int','Intermediação']];
+var MODS=[['pend','Pendências'],['ia','Assistente'],['link','Links'],['rot','Roteiros'],['nota','Notas'],['cons','Consórcio'],['cert','Certificados'],['sim','Simulador FGTS'],['int','Intermediação']];
 var SECOES={pend:'DIA A DIA',cons:'CONSULTA'};
 var atual='pend';
 function navBadge(k){
@@ -288,7 +288,7 @@ function vPend(){
    '<div class="row" style="margin-top:16px;align-items:stretch">'+
    '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px">'+
      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px"><b style="font-size:17px">Textos</b><span style="font-size:13px;color:var(--muted)">clique para adicionar</span></div>'+
-     '<input class="inp" type="search" id="pd-q" placeholder="Buscar texto: renda, procuração, ilegível, união estável..." value="'+esc(PD.q)+'" oninput="PD.q=this.value;pdLista()">'+
+     '<input class="inp" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="pd-q" placeholder="Buscar texto: renda, procuração, ilegível, união estável..." value="'+esc(PD.q)+'" oninput="PD.q=this.value;pdLista()">'+
      '<div class="pd-list" id="pd-list"></div></section>'+
    '<section class="card" style="flex:1 1 400px;min-width:0;display:flex;flex-direction:column;gap:12px">'+
      '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap"><b style="font-size:17px">Texto montado</b><div style="display:flex;gap:8px"><button class="btn2" onclick="pdLimpar()">Limpar</button><button class="btn" style="background:var(--ink)" id="pd-copy" onclick="pdCopiar(this)">Copiar texto</button></div></div>'+
@@ -482,7 +482,7 @@ async function vRot(){
    '<div class="row" style="margin-top:16px;align-items:flex-start">'+
    '<section class="card" style="flex:1 1 240px;max-width:320px;padding:16px 10px;display:flex;flex-direction:column;gap:8px;position:sticky;top:16px">'+
      '<div class="seg" style="align-self:stretch;display:flex"><button style="flex:1" class="'+(RT.lado!=='mud'?'on':'')+'" onclick="RT.lado=\'ind\';vRot()">Índice</button><button style="flex:1" class="'+(RT.lado==='mud'?'on':'')+'" onclick="RT.lado=\'mud\';vRot()">O que mudou</button></div>'+
-     (RT.lado!=='mud'?'<input class="inp" type="search" id="rot-q" placeholder="Buscar no roteiro..." value="'+esc(RT.q)+'" oninput="RT.q=this.value;rotLateral()">':'')+
+     (RT.lado!=='mud'?'<input class="inp" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="rot-q" placeholder="Buscar no roteiro..." value="'+esc(RT.q)+'" oninput="RT.q=this.value;rotLateral()">':'')+
      '<div id="rot-lat" style="display:flex;flex-direction:column;gap:'+(RT.lado==='mud'?'8':'2')+'px;max-height:calc(100vh - 200px);overflow-y:auto"></div></section>'+
    '<section class="card" style="flex:4 1 520px;min-width:0;padding:14px;display:flex;flex-direction:column;gap:10px">'+
      '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">'+
@@ -580,7 +580,7 @@ function linksTodos(){
 }
 function vLinks(){
   var h=cab('Links','Os sites que os roteiros usam, num lugar só.')+quadros([['Links no total',linksTodos().length],['Do roteiro de financiamento',((D.linksRot||{}).fin||[]).length],['Do roteiro de consórcio',((D.linksRot||{}).cs||[]).length]]);
-  h+='<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px"><input class="inp" type="search" id="lk-q" placeholder="Filtrar links..." value="'+esc(LK.q)+'" oninput="LK.q=this.value;lkLista()"><div id="lk-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));grid-auto-rows:1fr;gap:10px"></div></section>';
+  h+='<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:12px"><input class="inp" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" id="lk-q" placeholder="Filtrar links..." value="'+esc(LK.q)+'" oninput="LK.q=this.value;lkLista()"><div id="lk-lista" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));grid-auto-rows:1fr;gap:10px"></div></section>';
   $('view').innerHTML=h;lkLista();
 }
 function lkLista(){
@@ -794,7 +794,8 @@ async function ponteChecar(){
       var tc=(r.trechos||[]).filter(function(x,i){return cit.indexOf(i+1)>=0;}).map(function(x){return {fonte:x.fonte,ref:x.ref,origem:x.origem,pagina:x.pagina};});
       db('duvidas',{method:'POST',body:JSON.stringify({pergunta:r.pergunta,resposta:resp,trechos:tc})}).then(function(sv){if(sv&&sv[0]&&DV.hist){DV.hist.unshift(sv[0]);if(atual==='ia'&&IA.modo==='duv')vIA();}}).catch(function(){});
     }
-    db('ponte?id=eq.'+r.id,{method:'DELETE'}).catch(function(){});
+    if(tp==='duv')db('ponte?id=eq.'+r.id,{method:'DELETE'}).catch(function(){});
+    else if(TH.itens){TH.itens.unshift({id:r.id,destino:r.destino,pergunta:r.pergunta,resposta:r.resposta,respondido_em:r.respondido_em||new Date().toISOString()});}
     PONTE[tp]=null;mudou=true;avisarChegou();
   });
   if(mudou){ponteGuardar();ponteVigiar();renderNav();if(atual==='ia'&&IA.modo!=='fila')vIA();}
@@ -819,6 +820,36 @@ async function iaEnviar(){
     PONTE.txt={id:r.id,prompt:r.prompt};IA.res=null;ponteGuardar();ponteVigiar();renderNav();
   }catch(e){IA.erro=e.message+(/ponte/.test(e.message)?' (a tabela "ponte" já foi criada no Supabase?)':'');}
   IA.carregando=false;vIA();
+}
+/* ---- histórico de textos ---- */
+var TH={itens:null,q:'',erro:false,aberto:null};
+async function thCarregar(){
+  try{TH.itens=await db('ponte?select=id,destino,pergunta,resposta,respondido_em&tipo=eq.txt&resposta=not.is.null&order=respondido_em.desc&limit=300')||[];}
+  catch(e){TH.itens=[];TH.erro=true;}
+  if(atual==='ia'&&IA.modo==='txt')thLista();
+}
+function thTexto(x){return separarMudancas(limparMd(x.resposta,/^whatsapp/.test(x.destino||''))).texto;}
+function thRot(x){var d=(x.destino||'').split(':');return (d[1]==='sit'?'Montar resposta':'Melhorar texto')+' · '+({email:'E-mail',whatsapp:'WhatsApp',pendencia:'Pendência'}[d[0]]||'');}
+function thItens(L){
+  return L.length?L.map(function(x){
+    return '<details id="th-'+x.id+'" style="background:#fff;border:1px solid var(--line2);border-radius:16px;padding:10px 14px"'+(TH.aberto===x.id?' open':'')+'><summary style="cursor:pointer;display:flex;align-items:center;gap:10px;list-style:none">'+
+      '<span class="ic">'+svgI(ICON.ia)+'</span><span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><b style="font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.pergunta.replace(/\s+/g,' ').slice(0,140))+'</b><small style="color:var(--muted)">'+dvData(x.respondido_em)+'</small></span><span class="pill p-msg">'+esc(thRot(x))+'</span></summary>'+
+      '<div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">'+
+        '<div class="pd-out" style="height:auto;min-height:0;padding:12px 14px">'+marcar(thTexto(x))+'</div>'+
+        '<details><summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--muted)">Ver o que você mandou</summary><div style="white-space:pre-wrap;font-size:13px;color:var(--ink2);background:var(--soft);border-radius:12px;padding:10px 12px;margin-top:6px">'+esc(x.pergunta)+'</div></details>'+
+        '<div style="display:flex;gap:6px;flex-wrap:wrap"><button class="btn2 btn-sm" onclick="copiar(limparCopia(thTexto(TH.itens.find(function(y){return y.id==='+x.id+'}))),this)">Copiar texto</button><button class="btn2 btn-sm" onclick="thReusar('+x.id+')">Usar o rascunho de novo</button><button class="btn2 btn-sm" onclick="thApagar('+x.id+')">Apagar</button></div></div></details>';
+  }).join(''):'<span style="font-size:13px;color:var(--muted)">Nada encontrado.</span>';
+}
+function thLista(){var el=$('th-lista');if(!el)return;var L=(TH.itens||[]).filter(function(x){return !TH.q.trim()||casa(x.pergunta+' '+x.resposta,TH.q);});el.innerHTML=thItens(L);var n=$('th-n');if(n)n.textContent=(TH.itens||[]).length;}
+function thReusar(id){var x=TH.itens.find(function(y){return y.id===id;});if(!x)return;var d=(x.destino||'').split(':');IA.texto=x.pergunta;IA.destino=d[0]||'email';IA.forma=d[1]==='sit'?'sit':'txt';vIA();window.scrollTo(0,0);}
+async function thApagar(id){if(!confirm('Apagar este texto do histórico?'))return;try{await db('ponte?id=eq.'+id,{method:'DELETE'});}catch(e){}TH.itens=TH.itens.filter(function(x){return x.id!==id;});thLista();}
+function thAbrir(id){TH.q='';TH.aberto=id;IA.modo='txt';ir('ia');setTimeout(function(){var e=$('th-'+id);if(e){e.open=true;e.scrollIntoView({behavior:'smooth',block:'start'});}},80);}
+function thHtml(){
+  if(TH.itens===null){TH.itens=undefined;thCarregar();}
+  if(TH.erro)return '';
+  return '<section class="card" style="margin-top:16px;display:flex;flex-direction:column;gap:10px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:16px">Textos anteriores · <span id="th-n">'+((TH.itens||[]).length)+'</span></b>'+
+    '<input class="inp" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="max-width:300px;padding:8px 14px" placeholder="Buscar nos textos..." value="'+esc(TH.q)+'" oninput="TH.q=this.value;thLista()"></div>'+
+    '<div id="th-lista" style="display:flex;flex-direction:column;gap:8px">'+(TH.itens===undefined?'<span style="font-size:13px;color:var(--muted)">Carregando...</span>':'')+'</div></section>';
 }
 function iaModo(m){if($('ia-txt'))IA.texto=$('ia-txt').value;IA.modo=m;vIA();}
 function iaForma(f){IA.texto=$('ia-txt')?$('ia-txt').value:IA.texto;IA.forma=f;vIA();}
@@ -957,7 +988,7 @@ function dvHtml(){
   if(DV.hist===null){DV.hist=undefined;dvHist();}
   var H=(DV.hist||[]).filter(function(x){return !DV.hq.trim()||casa(x.pergunta+' '+x.resposta,DV.hq);});
   if(DV.hist&&DV.hist.length)h+='<section class="card" style="display:flex;flex-direction:column;gap:8px"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:15px">Perguntas anteriores · '+DV.hist.length+'</b>'+
-    '<input class="inp" type="search" style="max-width:280px;padding:8px 14px" placeholder="Buscar nas perguntas..." value="'+esc(DV.hq)+'" oninput="DV.hq=this.value;dvHistLista()"></div><div id="dv-hl" style="display:flex;flex-direction:column;gap:8px">'+dvHistItens(H)+'</div></section>';
+    '<input class="inp" type="search" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" style="max-width:280px;padding:8px 14px" placeholder="Buscar nas perguntas..." value="'+esc(DV.hq)+'" oninput="DV.hq=this.value;dvHistLista()"></div><div id="dv-hl" style="display:flex;flex-direction:column;gap:8px">'+dvHistItens(H)+'</div></section>';
   else if(DV.erroHist)h+='<div class="note">Não consegui carregar o histórico. O SQL do histórico já foi rodado?</div>';
   h+='</div><section class="card" style="flex:1 1 260px;max-width:340px;display:flex;flex-direction:column;gap:10px"><b style="font-size:16px">Base da consulta</b>'+
      '<div style="font-size:13px;color:var(--muted);line-height:1.5">Os roteiros do mês entram sozinhos. Leis e manuais você adiciona aqui uma vez (PDF, TXT ou a página da lei salva do Planalto).</div>'+
@@ -1095,10 +1126,11 @@ function vIA(){
        (IA.res.mudancas?'<div style="background:var(--soft);border-radius:14px;padding:10px 14px;font-size:13px;white-space:pre-wrap"><b style="display:block;font-size:12px;color:#4F555E;margin-bottom:2px">O QUE MUDOU</b>'+esc(IA.res.mudancas)+'</div>':'')+
        '<button class="btn2" style="align-self:flex-start" id="ia-copy" onclick="copiar(limparCopia(IA.res.texto),this)">Copiar texto</button>'
       :(PONTE.txt?'':'<div style="color:var(--muted);font-size:14px;padding:30px 10px;text-align:center">O texto revisado aparece aqui.</div>'))+
-     '</section></div>';
+     '</section></div>'+thHtml();
   }
   if(IA.modo!=='fila')h+='<div class="note" style="margin-top:16px;font-size:13px;line-height:1.5">Como funciona: aqui você manda o pedido. No iPhone, abra a Bancada → Assistente → <b>Fila do celular</b>, toque em <b>Enviar pro Claude</b>, copie a resposta no app e toque em <b>Colar resposta</b>. Ela aparece nesta tela sozinha.</div>';
   $('view').innerHTML=h;
+  if(IA.modo==='txt'&&TH.itens)thLista();
 }
 
 /* ====== INTERMEDIAÇÃO ====== */
@@ -1188,6 +1220,7 @@ function buscar(q){
     Object.keys(I.iqPaths).forEach(function(k){I.iqPaths[k].steps.forEach(function(s){add('iq',k,s,'IQ · '+I.iqPaths[k].n);});});}
   ['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(!v||!ROT_PAG[v.id])return;var qq=semAc(q).trim();
     ROT_PAG[v.id].forEach(function(txt,i){var a=semAc(txt),k=a.indexOf(qq);if(k>=0){var ini=Math.max(0,k-40);hits.push({g:'Roteiro · '+(tp==='fin'?'Financiamento':'Consórcio')+' · p. '+(i+1),t:rotSecao(v,i+1),s:txt.slice(ini,k+qq.length+90),go:function(){RT.r=tp;RT.pag=i+1;RT.q=q;ir('rot');}});}});});
+  (TH.itens||[]).forEach(function(x){if(casa(x.pergunta+' '+x.resposta,q))hits.push({g:'Texto anterior · '+dvData(x.respondido_em),t:x.pergunta.replace(/\s+/g,' ').slice(0,90),s:thTexto(x),go:function(){thAbrir(x.id);}});});
   (DV.hist||[]).forEach(function(x){if(casa(x.pergunta+' '+x.resposta,q))hits.push({g:'Dúvida anterior · '+dvData(x.criado_em),t:x.pergunta,s:x.resposta,go:function(){IA.modo='duv';ir('ia');dvAbrirHist(x.id);}});});
   linksTodos().forEach(function(l){if(casa(l.n,q))hits.push({g:'Links',t:l.n,s:l.links?l.links.map(function(x){return x.rot;}).join(' · '):l.u,go:function(){LK.q=l.n;ir('link');}});});
   CONS_TOP.forEach(function(t,i){if(casa(t.t+' '+t.ideia+' '+t.pts.join(' '),q))hits.push({g:'Consórcio',t:t.t,s:t.ideia,go:function(){CS.i=i;ir('cons');}});});
@@ -1211,7 +1244,7 @@ async function iniciar(){
   if(window.matchMedia&&matchMedia('(max-width:760px)').matches){try{if(localStorage.getItem('bancada_completa')!=='1')modoCelular(true);}catch(e){modoCelular(true);}}
   ponteLer();ponteVigiar();
   renderNav();
-  try{await carregar();render();if(DV.hist===null){DV.hist=undefined;dvHist();}rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
+  try{await carregar();render();if(DV.hist===null){DV.hist=undefined;dvHist();}if(!CEL&&TH.itens===null){TH.itens=undefined;thCarregar();}rotCarregarLista().then(function(){['fin','cs'].forEach(function(tp){var v=ROT.find(function(x){return x.id===RT.ver[tp];});if(v)rotPaginas(v).catch(function(){});});}).catch(function(){});}
   catch(e){if(/sessão|sem sessão/.test(e.message)){sair();return;}$('view').innerHTML='<div class="note">Não consegui carregar os dados: '+esc(e.message)+'</div>';}
 }
 (function(){sessao=lerSessao();if(sessao)iniciar();else mostrarLogin();})();
