@@ -268,7 +268,7 @@ function pdTexto(){
   var adds=PD.add.map(function(id){return D.textos.find(function(t){return t.id===id;});}).filter(Boolean);
   var msg=adds.filter(function(t){return t.tipo==='msg';});
   var junta=function(s){return String(s||'').replace(/\n\s*\n/g,'\n');};
-  if(msg.length)return {h:'',b:msg[msg.length-1].texto,f:''};
+  if(msg.length)return {h:'',b:String(msg[msg.length-1].texto).replace(/\{\{RODAPE\}\}/g,String(ch.f||'').trim()),f:''};
   return {h:junta(ch.h),b:adds.map(function(t){return t.texto;}).join('\n'),f:junta(ch.f)};
 }
 function quadros(lista){return '<div class="stats" style="margin-top:16px">'+lista.map(function(q){return '<div class="stat"><small>'+q[0]+'</small><div>'+q[1]+(q[2]?'<span class="pill '+(q[3]||'p-msg')+'">'+q[2]+'</span>':'')+'</div></div>';}).join('')+'</div>';}
@@ -298,7 +298,7 @@ function vPend(){
 }
 function pdLimpar(){PD.add=[];pdLista();pdSaida();var st=$('pd-stats');if(st)st.outerHTML=pdStats();}
 function pdMod(m){PD.mod=m;PD.add=[];vPend();}
-function pdCanal(c){PD.canal=c;PD.add=[];vPend();}
+function pdCanal(c){PD.canal=c;PD.add=[];vPend();var i=$('pd-q');if(i&&PD.q){i.focus();}}
 var PD_IC={
   ok:'<path d="M5 12l5 5L20 7"/>',
   msg:'<path d="M4 6h16v10H8l-4 4z"/>',
@@ -308,7 +308,7 @@ var PD_IC={
 function pdLista(){
   var l=pdItens().filter(function(t){return casa(t.nome+' '+t.texto,PD.q);});
   $('pd-list').innerHTML=l.length?l.map(function(t){
-    var ad=PD.add.indexOf(t.id)>=0,pv=t.texto.replace(/\n/g,' ');if(pv.length>150)pv=pv.slice(0,150)+'…';
+    var ad=PD.add.indexOf(t.id)>=0,pv=t.texto.replace(/\{\{RODAPE\}\}/g,'').replace(/\n/g,' ');if(pv.length>150)pv=pv.slice(0,150)+'…';
     var k=ad?'ok':(t.tipo==='msg'?'msg':(t.revisar?'rev':'doc'));
     var icCor={ok:'background:#DDF3EC;color:#0B5C4A',msg:'background:#E3EEFB;color:#1E4E8C',rev:'background:#FDEBD3;color:#7A4100',doc:''}[k];
     var pills=(ad?'<span class="pill p-ok">● adicionado</span>':'')+(t.tipo==='msg'?'<span class="pill p-msg">● mensagem pronta</span>':'')+(t.revisar?'<span class="pill p-rev">● revisar</span>':'')+(t.modalidade==='cs'?'<span class="pill p-cs">● consórcio</span>':'');
@@ -316,7 +316,16 @@ function pdLista(){
       '<span class="ic" style="'+icCor+'"><svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+PD_IC[k]+'</svg></span>'+
       '<div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px"><div class="tt">'+esc(t.nome)+'</div><div class="pv">'+esc(pv)+'</div></div>'+
       (pills?'<div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end">'+pills+'</div>':'')+'</div>';
-  }).join(''):'<div style="color:var(--muted);font-size:14px;padding:20px">Nada encontrado. Tente outra palavra.</div>';
+  }).join(''):'<div style="color:var(--muted);font-size:14px;padding:20px">Nada encontrado nesta aba.</div>';
+  if(PD.q.trim()){
+    var aqui=pdItens().map(function(t){return t.id;});
+    var fora=D.textos.filter(function(t){return aqui.indexOf(t.id)<0&&casa(t.nome+' '+t.texto,PD.q);});
+    var wa=fora.filter(function(t){return t.canal==='wa';}).length,tr=fora.length-wa;
+    if(fora.length)$('pd-list').innerHTML+='<div style="background:#E3EEFB;color:#12345E;border-radius:14px;padding:10px 12px;font-size:13px;display:flex;flex-wrap:wrap;gap:8px;align-items:center"><b>Também tem '+fora.length+' em outra aba:</b>'+
+      (tr&&PD.canal!=='tr'?'<button class="btn2 btn-sm" onclick="pdCanal(\'tr\')">'+tr+' no Tradicional</button>':'')+
+      (wa&&PD.canal!=='wa'?'<button class="btn2 btn-sm" onclick="pdCanal(\'wa\')">'+wa+' no WhatsApp</button>':'')+
+      ((tr&&PD.canal==='tr')||(wa&&PD.canal==='wa')?'<button class="btn2 btn-sm" onclick="pdMod(\''+(PD.mod==='cs'?'fin':'cs')+'\')">ver em '+(PD.mod==='cs'?'Financiamento':'Consórcio')+'</button>':'')+'</div>';
+  }
 }
 function pdAdd(id){
   var t=D.textos.find(function(x){return x.id===id;});if(!t)return;
